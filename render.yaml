@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mingyu-frontend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: REPORT_PROVIDER
+        value: minimax
+      - key: MINIMAX_MODEL
+        value: MiniMax-M2.5
+      - key: MINIMAX_API_KEY
+        sync: false

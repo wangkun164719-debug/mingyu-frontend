@@ -32,7 +32,7 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
           解锁完整命运之书
         </h3>
         <p className="mt-3 text-center text-sm leading-7 text-mist-300">
-          本项目不接真实支付，这里仅模拟支付确认流程。点击确认后将直接进入详细报告页。
+          限时开放免费体验资格。点击确认后将直接进入详细报告页，不会产生真实扣费。
         </p>
 
         <div className="mt-6 rounded-3xl border border-gold-500/15 bg-white/5 p-5">
@@ -42,11 +42,14 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
           </div>
           <div className="mt-4 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-gold-300/80">体验价</p>
-              <p className="mt-1 text-3xl font-semibold text-gold-300">¥68</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-gold-300/80">限时权益</p>
+              <div className="mt-2 flex items-end gap-3">
+                <p className="text-lg text-mist-400 line-through">¥29.9</p>
+                <p className="text-3xl font-semibold text-gold-300">免费体验</p>
+              </div>
             </div>
             <p className="text-right text-xs leading-6 text-mist-400">
-              仅用于演示，
+              当前为限时活动，
               <br />
               不会产生真实扣费
             </p>
@@ -66,7 +69,7 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
             className="rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(198,157,45,0.24)] active:scale-[0.98]"
             onClick={onConfirm}
           >
-            确认支付
+            立即免费体验
           </button>
         </div>
       </div>

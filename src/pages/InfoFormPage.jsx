@@ -5,6 +5,7 @@ import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import IconBadge from "../components/IconBadge";
 import { defaultProfile, preferenceOptions } from "../data/site";
+import { saveLatestProfile } from "../services/reportApi";
 
 const initialForm = {
   ...defaultProfile
@@ -40,6 +41,7 @@ export default function InfoFormPage() {
 
   const onSubmit = (event) => {
     event.preventDefault();
+    saveLatestProfile(form);
     navigate("/result", { state: { profile: form } });
   };
 
