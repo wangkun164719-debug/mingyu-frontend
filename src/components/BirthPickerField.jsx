@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarIcon, ClockIcon } from "./Icons";
 
 const WEEK_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -181,15 +182,15 @@ function LayerShell({ isMobile, title, children, open, onClose, onConfirm }) {
   }
 
   if (isMobile) {
-    return (
-      <div className="fixed inset-0 z-50">
+    const mobileLayer = (
+      <div className="fixed inset-0 z-[60]">
         <button
           type="button"
           className="absolute inset-0 bg-[#030712]/70 backdrop-blur-sm"
           onClick={onClose}
           aria-label="关闭选择器"
         />
-        <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-hidden rounded-t-[32px] border border-gold-500/18 bg-[linear-gradient(180deg,rgba(18,29,56,0.98),rgba(15,24,47,0.98))] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-4 shadow-[0_-20px_60px_rgba(4,10,24,0.55)] animate-modal sm:px-6">
+        <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-hidden rounded-t-[32px] border border-gold-500/18 bg-[linear-gradient(180deg,rgba(18,29,56,0.98),rgba(15,24,47,0.98))] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-4 shadow-[0_-20px_60px_rgba(4,10,24,0.55)] animate-modal sm:px-6">
           <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
           <div className="mb-4 flex items-center justify-between gap-4">
             <button
@@ -208,10 +209,14 @@ function LayerShell({ isMobile, title, children, open, onClose, onConfirm }) {
               确定
             </button>
           </div>
-          <div className="max-h-[calc(85vh-92px)] overflow-y-auto pb-1">{children}</div>
+          <div className="max-h-[calc(85dvh-92px)] overflow-y-auto overscroll-contain pb-1">
+            {children}
+          </div>
         </div>
       </div>
     );
+
+    return typeof document !== "undefined" ? createPortal(mobileLayer, document.body) : mobileLayer;
   }
 
   return (
@@ -244,7 +249,7 @@ function WheelColumn({ label, options, selectedValue, onSelect, tall = false }) 
   const scrollRef = useRef(null);
   const snapTimeoutRef = useRef(null);
   const isMobile = useIsMobile();
-  const wheelHeight = tall ? (isMobile ? 220 : 260) : isMobile ? 184 : 220;
+  const wheelHeight = isMobile ? 220 : tall ? 260 : 220;
   const edgePadding = Math.max(0, Math.round((wheelHeight - WHEEL_ITEM_HEIGHT) / 2));
 
   useEffect(() => {
