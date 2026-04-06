@@ -4,11 +4,16 @@ import { DatePickerField, TimePickerField } from "../components/BirthPickerField
 import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import IconBadge from "../components/IconBadge";
-import { defaultProfile, preferenceOptions } from "../data/site";
+import { preferenceOptions } from "../data/site";
 import { saveLatestProfile } from "../services/reportApi";
 
 const initialForm = {
-  ...defaultProfile
+  name: "",
+  gender: "男",
+  birthDate: "",
+  birthTime: "",
+  birthPlace: "",
+  preferences: []
 };
 
 function Label({ icon, children }) {

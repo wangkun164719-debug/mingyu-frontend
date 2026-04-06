@@ -45,7 +45,9 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
               <p className="text-xs uppercase tracking-[0.3em] text-gold-300/80">限时权益</p>
               <div className="mt-2 flex items-end gap-3">
                 <p className="text-lg text-mist-400 line-through">¥29.9</p>
-                <p className="text-3xl font-semibold text-gold-300">免费体验</p>
+                <p className="whitespace-nowrap text-2xl font-semibold leading-none text-gold-300 sm:text-3xl">
+                  免费体验
+                </p>
               </div>
             </div>
             <p className="text-right text-xs leading-6 text-mist-400">
@@ -66,7 +68,7 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
           </button>
           <button
             type="button"
-            className="rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+            className="whitespace-nowrap rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-xs font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(198,157,45,0.24)] active:scale-[0.98] sm:text-sm"
             onClick={onConfirm}
           >
             立即免费体验
