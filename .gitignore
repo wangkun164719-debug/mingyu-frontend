@@ -1,0 +1,12 @@
+node_modules/
+dist/
+
+.chrome-headless/
+.codex/
+chrome-dom.html
+.tmp-dom.html
+dev-server.out.log
+dev-server.err.log
+
+.DS_Store
+Thumbs.db
