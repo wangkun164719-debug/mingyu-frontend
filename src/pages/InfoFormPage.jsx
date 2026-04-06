@@ -1,6 +1,6 @@
 ﻿import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DatePickerField, TimePickerField } from "../components/BirthPickerField";
+import { DatePickerField, TimePickerField, UNKNOWN_TIME } from "../components/BirthPickerField";
 import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import IconBadge from "../components/IconBadge";
@@ -48,6 +48,27 @@ function validateForm(form) {
 
   if (!form.birthPlace.trim()) {
     errors.birthPlace = "请输入出生地点";
+  }
+
+  if (form.birthDate) {
+    const now = new Date();
+    const todayValue = [
+      now.getFullYear(),
+      `${now.getMonth() + 1}`.padStart(2, "0"),
+      `${now.getDate()}`.padStart(2, "0")
+    ].join("-");
+
+    if (form.birthDate > todayValue) {
+      errors.birthDate = "出生日期不能晚于今天";
+    } else if (form.birthDate === todayValue && form.birthTime && form.birthTime !== UNKNOWN_TIME) {
+      const [hour, minute] = form.birthTime.split(":").map(Number);
+      const candidate = new Date(now);
+      candidate.setHours(hour || 0, minute || 0, 0, 0);
+
+      if (candidate.getTime() > now.getTime()) {
+        errors.birthTime = "出生日期时间不能晚于当前时间";
+      }
+    }
   }
 
   return errors;
@@ -166,6 +187,7 @@ export default function InfoFormPage() {
               <TimePickerField
                 value={form.birthTime}
                 onChange={(birthTime) => updateField("birthTime", birthTime)}
+                selectedDate={form.birthDate}
                 helperText="时辰对命理解读至关重要，请尽量准确填写。"
               />
               <FieldError message={errors.birthTime} />

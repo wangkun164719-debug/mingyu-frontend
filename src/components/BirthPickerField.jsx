@@ -8,6 +8,26 @@ const MAX_YEAR = new Date().getFullYear();
 const WHEEL_ITEM_HEIGHT = 48;
 export const UNKNOWN_TIME = "UNKNOWN";
 
+function getTodayDate() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function clampDateToToday(date) {
+  const today = getTodayDate();
+  return date.getTime() > today.getTime() ? today : date;
+}
+
+function clampMonthToToday(date) {
+  const today = getTodayDate();
+  const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  return date.getTime() > currentMonth.getTime() ? currentMonth : date;
+}
+
+function getDateValueForToday() {
+  return toDateValue(getTodayDate());
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
@@ -54,12 +74,11 @@ function normalizeDateParts(year, monthIndex, day) {
 
 function parseDateValue(value) {
   if (!value) {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return getTodayDate();
   }
 
   const [year, month, day] = value.split("-").map(Number);
-  return normalizeDateParts(year, month - 1, day);
+  return clampDateToToday(normalizeDateParts(year, month - 1, day));
 }
 
 function toDateValue(date) {
@@ -85,6 +104,7 @@ function createMonthMatrix(activeMonth, selectedValue) {
     const isCurrentMonth = date.getMonth() === month;
     const isToday = value === toDateValue(new Date());
     const isSelected = selected ? value === toDateValue(selected) : false;
+    const isFuture = date.getTime() > getTodayDate().getTime();
 
     return {
       value,
@@ -92,7 +112,8 @@ function createMonthMatrix(activeMonth, selectedValue) {
       date,
       isCurrentMonth,
       isToday,
-      isSelected
+      isSelected,
+      isFuture
     };
   });
 }
@@ -222,7 +243,9 @@ function LayerShell({ isMobile, title, children, open, onClose, onConfirm }) {
 function WheelColumn({ label, options, selectedValue, onSelect, tall = false }) {
   const scrollRef = useRef(null);
   const snapTimeoutRef = useRef(null);
-  const heightClass = tall ? "h-[260px]" : "h-[220px]";
+  const isMobile = useIsMobile();
+  const wheelHeight = tall ? (isMobile ? 220 : 260) : isMobile ? 184 : 220;
+  const edgePadding = Math.max(0, Math.round((wheelHeight - WHEEL_ITEM_HEIGHT) / 2));
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -292,14 +315,21 @@ function WheelColumn({ label, options, selectedValue, onSelect, tall = false }) 
       <div className="mb-3 px-2 text-center text-xs uppercase tracking-[0.25em] text-gold-300/85">
         {label}
       </div>
-      <div className={`relative overflow-hidden rounded-[24px] border border-gold-500/14 bg-white/[0.04] ${heightClass}`}>
-        <div className="pointer-events-none absolute inset-x-3 top-1/2 z-10 h-12 -translate-y-1/2 rounded-2xl border border-gold-400/25 bg-gold-400/8 shadow-[0_0_0_1px_rgba(230,195,90,0.08)]" />
+      <div
+        className="relative overflow-hidden rounded-[24px] border border-gold-500/14 bg-white/[0.04]"
+        style={{ height: `${wheelHeight}px` }}
+      >
+        <div
+          className="pointer-events-none absolute inset-x-3 top-1/2 z-10 -translate-y-1/2 rounded-2xl border border-gold-400/25 bg-gold-400/8 shadow-[0_0_0_1px_rgba(230,195,90,0.08)]"
+          style={{ height: `${WHEEL_ITEM_HEIGHT}px` }}
+        />
         <div
           ref={scrollRef}
-          className="h-full snap-y snap-mandatory overflow-y-auto px-3 py-[84px]"
+          className="h-full snap-y snap-mandatory overflow-y-auto px-3"
+          style={{ paddingTop: `${edgePadding}px`, paddingBottom: `${edgePadding}px` }}
           onScroll={handleScroll}
         >
-          <div className="space-y-2">
+          <div>
             {options.map((option) => {
               const active = option.value === selectedValue;
               return (
@@ -323,9 +353,15 @@ function WheelColumn({ label, options, selectedValue, onSelect, tall = false }) 
 }
 
 function MobileDateWheel({ draftDate, onDraftChange }) {
+  const today = getTodayDate();
   const selectedYear = draftDate.getFullYear();
   const selectedMonth = draftDate.getMonth();
   const selectedDay = draftDate.getDate();
+  const maxMonthIndex = selectedYear === today.getFullYear() ? today.getMonth() : 11;
+  const maxDay =
+    selectedYear === today.getFullYear() && selectedMonth === today.getMonth()
+      ? today.getDate()
+      : daysInMonth(selectedYear, selectedMonth);
 
   const yearOptions = useMemo(
     () =>
@@ -336,22 +372,22 @@ function MobileDateWheel({ draftDate, onDraftChange }) {
     []
   );
 
-  const monthOptions = MONTH_LABELS.map((label, index) => ({
+  const monthOptions = MONTH_LABELS.slice(0, maxMonthIndex + 1).map((label, index) => ({
     value: index,
     label
   }));
 
-  const dayOptions = Array.from({ length: daysInMonth(selectedYear, selectedMonth) }, (_, index) => ({
+  const dayOptions = Array.from({ length: maxDay }, (_, index) => ({
     value: index + 1,
     label: `${index + 1} 日`
   }));
 
   const updateDate = (nextYear, nextMonth, nextDay) => {
-    onDraftChange(normalizeDateParts(nextYear, nextMonth, nextDay));
+    onDraftChange(clampDateToToday(normalizeDateParts(nextYear, nextMonth, nextDay)));
   };
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-[1.15fr_0.95fr_0.9fr] gap-2 sm:grid-cols-3 sm:gap-3">
       <WheelColumn
         label="年份"
         options={yearOptions}
@@ -434,14 +470,21 @@ function DesktopCalendarPanel({
               <button
                 key={item.value}
                 type="button"
+                disabled={item.isFuture}
                 className={`aspect-square rounded-2xl text-sm font-semibold transition duration-200 ${
                   item.isSelected
                     ? "bg-gold-400 text-ink-950 shadow-[0_10px_20px_rgba(198,157,45,0.22)]"
-                    : item.isCurrentMonth
+                    : item.isFuture
+                      ? "cursor-not-allowed text-mist-500/30"
+                      : item.isCurrentMonth
                       ? "bg-white/5 text-mist-100 hover:bg-white/10"
                       : "text-mist-400/45 hover:bg-white/[0.04]"
                 } ${item.isToday && !item.isSelected ? "border border-gold-400/35" : "border border-transparent"}`}
-                onClick={() => onDateSelect(item.date)}
+                onClick={() => {
+                  if (!item.isFuture) {
+                    onDateSelect(item.date);
+                  }
+                }}
               >
                 {item.label}
               </button>
@@ -499,14 +542,22 @@ function DesktopCalendarPanel({
           <div className="grid grid-cols-3 gap-3">
             {MONTH_LABELS.map((label, index) => {
               const active = activeMonth.getMonth() === index;
+              const isFutureMonth =
+                activeMonth.getFullYear() === getTodayDate().getFullYear() &&
+                index > getTodayDate().getMonth();
               return (
                 <button
                   key={label}
                   type="button"
+                  disabled={isFutureMonth}
                   className={`rounded-2xl px-3 py-4 text-sm font-semibold transition duration-200 ${
                     active ? "bg-gold-400 text-ink-950" : "bg-white/5 text-mist-100 hover:bg-white/10"
                   }`}
-                  onClick={() => onMonthSelect(index)}
+                  onClick={() => {
+                    if (!isFutureMonth) {
+                      onMonthSelect(index);
+                    }
+                  }}
                 >
                   {label}
                 </button>
@@ -519,13 +570,23 @@ function DesktopCalendarPanel({
   );
 }
 
-function MobileTimeWheel({ unknown, hour, minute, onUnknownChange, onHourChange, onMinuteChange }) {
-  const hourOptions = Array.from({ length: 24 }, (_, index) => ({
+function MobileTimeWheel({
+  unknown,
+  hour,
+  minute,
+  maxHour,
+  maxMinute,
+  onUnknownChange,
+  onHourChange,
+  onMinuteChange
+}) {
+  const hourOptions = Array.from({ length: maxHour + 1 }, (_, index) => ({
     value: `${index}`.padStart(2, "0"),
     label: `${index}`.padStart(2, "0")
   }));
 
-  const minuteOptions = Array.from({ length: 60 }, (_, index) => ({
+  const minuteLimit = hour === `${maxHour}`.padStart(2, "0") ? maxMinute : 59;
+  const minuteOptions = Array.from({ length: minuteLimit + 1 }, (_, index) => ({
     value: `${index}`.padStart(2, "0"),
     label: `${index}`.padStart(2, "0")
   }));
@@ -549,7 +610,7 @@ function MobileTimeWheel({ unknown, hour, minute, onUnknownChange, onHourChange,
       </button>
 
       {!unknown ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <WheelColumn label="小时" options={hourOptions} selectedValue={hour} onSelect={onHourChange} />
           <WheelColumn
             label="分钟"
@@ -563,9 +624,19 @@ function MobileTimeWheel({ unknown, hour, minute, onUnknownChange, onHourChange,
   );
 }
 
-function DesktopTimePanel({ unknown, hour, minute, onUnknownChange, onHourChange, onMinuteChange }) {
-  const hourOptions = Array.from({ length: 24 }, (_, index) => `${index}`.padStart(2, "0"));
-  const minuteOptions = Array.from({ length: 60 }, (_, index) => `${index}`.padStart(2, "0"));
+function DesktopTimePanel({
+  unknown,
+  hour,
+  minute,
+  maxHour,
+  maxMinute,
+  onUnknownChange,
+  onHourChange,
+  onMinuteChange
+}) {
+  const hourOptions = Array.from({ length: maxHour + 1 }, (_, index) => `${index}`.padStart(2, "0"));
+  const minuteLimit = hour === `${maxHour}`.padStart(2, "0") ? maxMinute : 59;
+  const minuteOptions = Array.from({ length: minuteLimit + 1 }, (_, index) => `${index}`.padStart(2, "0"));
 
   return (
     <div className="space-y-4">
@@ -640,16 +711,16 @@ export function DatePickerField({ value, onChange }) {
   const wrapperRef = useRef(null);
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [draftDate, setDraftDate] = useState(() => parseDateValue(value));
+  const [draftDate, setDraftDate] = useState(() => clampDateToToday(parseDateValue(value)));
   const [activeMonth, setActiveMonth] = useState(() => {
-    const parsed = parseDateValue(value);
+    const parsed = clampDateToToday(parseDateValue(value));
     return new Date(parsed.getFullYear(), parsed.getMonth(), 1);
   });
   const [viewMode, setViewMode] = useState("day");
 
   useEffect(() => {
     if (!open) {
-      const parsed = parseDateValue(value);
+      const parsed = clampDateToToday(parseDateValue(value));
       setDraftDate(parsed);
       setActiveMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
     }
@@ -683,7 +754,7 @@ export function DatePickerField({ value, onChange }) {
   }, [isMobile, open]);
 
   const openPicker = () => {
-    const parsed = parseDateValue(value);
+    const parsed = clampDateToToday(parseDateValue(value));
     setDraftDate(parsed);
     setActiveMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
     setViewMode("day");
@@ -691,7 +762,7 @@ export function DatePickerField({ value, onChange }) {
   };
 
   const confirm = () => {
-    onChange(toDateValue(draftDate));
+    onChange(toDateValue(clampDateToToday(draftDate)));
     setOpen(false);
     setViewMode("day");
   };
@@ -719,21 +790,30 @@ export function DatePickerField({ value, onChange }) {
             activeMonth={activeMonth}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            onMonthChange={(offset) => setActiveMonth((current) => shiftMonth(current, offset))}
+            onMonthChange={(offset) =>
+              setActiveMonth((current) => clampMonthToToday(shiftMonth(current, offset)))
+            }
             onDateSelect={(date) => {
-              setDraftDate(date);
-              setActiveMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+              const next = clampDateToToday(date);
+              setDraftDate(next);
+              setActiveMonth(new Date(next.getFullYear(), next.getMonth(), 1));
             }}
             onYearSelect={(year) => {
-              const next = normalizeDateParts(year, activeMonth.getMonth(), draftDate.getDate());
+              const next = clampDateToToday(
+                normalizeDateParts(year, activeMonth.getMonth(), draftDate.getDate())
+              );
               setDraftDate(next);
-              setActiveMonth(new Date(year, activeMonth.getMonth(), 1));
+              setActiveMonth(clampMonthToToday(new Date(year, activeMonth.getMonth(), 1)));
               setViewMode("month");
             }}
             onMonthSelect={(monthIndex) => {
-              const next = normalizeDateParts(activeMonth.getFullYear(), monthIndex, draftDate.getDate());
+              const next = clampDateToToday(
+                normalizeDateParts(activeMonth.getFullYear(), monthIndex, draftDate.getDate())
+              );
               setDraftDate(next);
-              setActiveMonth(new Date(activeMonth.getFullYear(), monthIndex, 1));
+              setActiveMonth(
+                clampMonthToToday(new Date(activeMonth.getFullYear(), monthIndex, 1))
+              );
               setViewMode("day");
             }}
           />
@@ -743,22 +823,47 @@ export function DatePickerField({ value, onChange }) {
   );
 }
 
-export function TimePickerField({ value, onChange, helperText }) {
+export function TimePickerField({ value, onChange, helperText, selectedDate }) {
   const wrapperRef = useRef(null);
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const parsed = useMemo(() => parseTimeValue(value), [value]);
+  const limitToNow = selectedDate === getDateValueForToday();
+  const now = new Date();
+  const maxHour = limitToNow ? now.getHours() : 23;
+  const maxMinute = limitToNow ? now.getMinutes() : 59;
   const [draftHour, setDraftHour] = useState(parsed.hour);
   const [draftMinute, setDraftMinute] = useState(parsed.minute);
   const [draftUnknown, setDraftUnknown] = useState(parsed.unknown);
 
   useEffect(() => {
     if (!open) {
-      setDraftHour(parsed.hour);
-      setDraftMinute(parsed.minute);
+      const safeHour = Math.min(Number(parsed.hour), maxHour);
+      const safeMinute =
+        safeHour === maxHour ? Math.min(Number(parsed.minute), maxMinute) : Number(parsed.minute);
+      setDraftHour(`${safeHour}`.padStart(2, "0"));
+      setDraftMinute(`${safeMinute}`.padStart(2, "0"));
       setDraftUnknown(parsed.unknown);
     }
-  }, [open, parsed.hour, parsed.minute, parsed.unknown]);
+  }, [maxHour, maxMinute, open, parsed.hour, parsed.minute, parsed.unknown]);
+
+  useEffect(() => {
+    if (!open || draftUnknown) {
+      return;
+    }
+
+    const safeHour = Math.min(Number(draftHour), maxHour);
+    const safeMinute =
+      safeHour === maxHour ? Math.min(Number(draftMinute), maxMinute) : Number(draftMinute);
+
+    if (`${safeHour}`.padStart(2, "0") !== draftHour) {
+      setDraftHour(`${safeHour}`.padStart(2, "0"));
+    }
+
+    if (`${safeMinute}`.padStart(2, "0") !== draftMinute) {
+      setDraftMinute(`${safeMinute}`.padStart(2, "0"));
+    }
+  }, [draftHour, draftMinute, draftUnknown, maxHour, maxMinute, open]);
 
   useEffect(() => {
     if (!open || isMobile) {
@@ -787,8 +892,11 @@ export function TimePickerField({ value, onChange, helperText }) {
 
   const openPicker = () => {
     const current = parseTimeValue(value);
-    setDraftHour(current.hour);
-    setDraftMinute(current.minute);
+    const safeHour = Math.min(Number(current.hour), maxHour);
+    const safeMinute =
+      safeHour === maxHour ? Math.min(Number(current.minute), maxMinute) : Number(current.minute);
+    setDraftHour(`${safeHour}`.padStart(2, "0"));
+    setDraftMinute(`${safeMinute}`.padStart(2, "0"));
     setDraftUnknown(current.unknown);
     setOpen(true);
   };
@@ -814,6 +922,8 @@ export function TimePickerField({ value, onChange, helperText }) {
             unknown={draftUnknown}
             hour={draftHour}
             minute={draftMinute}
+            maxHour={maxHour}
+            maxMinute={maxMinute}
             onUnknownChange={setDraftUnknown}
             onHourChange={setDraftHour}
             onMinuteChange={setDraftMinute}
@@ -823,6 +933,8 @@ export function TimePickerField({ value, onChange, helperText }) {
             unknown={draftUnknown}
             hour={draftHour}
             minute={draftMinute}
+            maxHour={maxHour}
+            maxMinute={maxMinute}
             onUnknownChange={setDraftUnknown}
             onHourChange={setDraftHour}
             onMinuteChange={setDraftMinute}
