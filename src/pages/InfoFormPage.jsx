@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DatePickerField, TimePickerField } from "../components/BirthPickerField";
 import PageIntro from "../components/PageIntro";
@@ -9,7 +9,7 @@ import { saveLatestProfile } from "../services/reportApi";
 
 const initialForm = {
   name: "",
-  gender: "男",
+  gender: "",
   birthDate: "",
   birthTime: "",
   birthPlace: "",
@@ -27,9 +27,58 @@ function Label({ icon, children }) {
   );
 }
 
+function validateForm(form) {
+  const errors = {};
+
+  if (!form.name.trim()) {
+    errors.name = "请输入姓名";
+  }
+
+  if (!form.gender) {
+    errors.gender = "请选择性别";
+  }
+
+  if (!form.birthDate) {
+    errors.birthDate = "请选择出生日期";
+  }
+
+  if (!form.birthTime) {
+    errors.birthTime = "请选择出生时间";
+  }
+
+  if (!form.birthPlace.trim()) {
+    errors.birthPlace = "请输入出生地点";
+  }
+
+  return errors;
+}
+
+function FieldError({ message }) {
+  if (!message) {
+    return null;
+  }
+
+  return <p className="mt-3 text-sm text-rose-300">{message}</p>;
+}
+
 export default function InfoFormPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
+  const [errors, setErrors] = useState({});
+  const fieldRefs = useRef({});
+
+  const updateField = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }));
+    setErrors((current) => {
+      if (!current[key]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
 
   const togglePreference = (preference) => {
     setForm((current) => {
@@ -46,6 +95,18 @@ export default function InfoFormPage() {
 
   const onSubmit = (event) => {
     event.preventDefault();
+    const nextErrors = validateForm(form);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstErrorKey = Object.keys(nextErrors)[0];
+      fieldRefs.current[firstErrorKey]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+      return;
+    }
+
     saveLatestProfile(form);
     navigate("/result", { state: { profile: form } });
   };
@@ -55,19 +116,20 @@ export default function InfoFormPage() {
       <PageIntro title="填写您的信息" subtitle="请准确填写以下信息，我们将为您生成专属的命理解读" />
 
       <PageSection className="pt-12">
-        <form className="panel mx-auto max-w-3xl p-6 sm:p-8 lg:p-10" onSubmit={onSubmit}>
+        <form className="panel mx-auto max-w-3xl p-6 sm:p-8 lg:p-10" onSubmit={onSubmit} noValidate>
           <div className="space-y-7">
-            <div>
+            <div ref={(node) => { fieldRefs.current.name = node; }}>
               <Label icon="user">姓名</Label>
               <input
-                className="input-shell"
+                className={`input-shell ${errors.name ? "border-rose-300/60 shadow-[0_0_0_4px_rgba(251,113,133,0.08)]" : ""}`}
                 value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
+                onChange={(event) => updateField("name", event.target.value)}
                 placeholder="请输入您的姓名"
               />
+              <FieldError message={errors.name} />
             </div>
 
-            <div>
+            <div ref={(node) => { fieldRefs.current.gender = node; }}>
               <Label icon="user">性别</Label>
               <div className="grid grid-cols-2 gap-4">
                 {["男", "女"].map((gender) => {
@@ -79,42 +141,45 @@ export default function InfoFormPage() {
                       className={`rounded-2xl border px-5 py-4 text-base font-semibold transition duration-200 ${
                         active
                           ? "border-gold-300/45 bg-gold-400/12 text-gold-300 shadow-[0_0_0_3px_rgba(230,195,90,0.08)]"
-                          : "border-gold-500/18 bg-white/5 text-mist-200 hover:border-gold-300/35 hover:bg-white/10"
+                          : `border-gold-500/18 bg-white/5 text-mist-200 hover:border-gold-300/35 hover:bg-white/10 ${
+                              errors.gender ? "border-rose-300/45" : ""
+                            }`
                       }`}
-                      onClick={() => setForm({ ...form, gender })}
+                      onClick={() => updateField("gender", gender)}
                     >
                       {gender}
                     </button>
                   );
                 })}
               </div>
+              <FieldError message={errors.gender} />
             </div>
 
-            <div>
+            <div ref={(node) => { fieldRefs.current.birthDate = node; }}>
               <Label icon="calendar">出生日期</Label>
-              <DatePickerField
-                value={form.birthDate}
-                onChange={(birthDate) => setForm({ ...form, birthDate })}
-              />
+              <DatePickerField value={form.birthDate} onChange={(birthDate) => updateField("birthDate", birthDate)} />
+              <FieldError message={errors.birthDate} />
             </div>
 
-            <div>
+            <div ref={(node) => { fieldRefs.current.birthTime = node; }}>
               <Label icon="clock">出生时间</Label>
               <TimePickerField
                 value={form.birthTime}
-                onChange={(birthTime) => setForm({ ...form, birthTime })}
+                onChange={(birthTime) => updateField("birthTime", birthTime)}
                 helperText="时辰对命理解读至关重要，请尽量准确填写。"
               />
+              <FieldError message={errors.birthTime} />
             </div>
 
-            <div>
+            <div ref={(node) => { fieldRefs.current.birthPlace = node; }}>
               <Label icon="pin">出生地点</Label>
               <input
-                className="input-shell"
+                className={`input-shell ${errors.birthPlace ? "border-rose-300/60 shadow-[0_0_0_4px_rgba(251,113,133,0.08)]" : ""}`}
                 value={form.birthPlace}
-                onChange={(event) => setForm({ ...form, birthPlace: event.target.value })}
+                onChange={(event) => updateField("birthPlace", event.target.value)}
                 placeholder="例如：北京市朝阳区"
               />
+              <FieldError message={errors.birthPlace} />
             </div>
 
             <div>

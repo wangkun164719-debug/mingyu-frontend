@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarIcon, ClockIcon } from "./Icons";
 
 const WEEK_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
 const MONTH_LABELS = Array.from({ length: 12 }, (_, index) => `${index + 1} 月`);
 const MIN_YEAR = 1940;
 const MAX_YEAR = new Date().getFullYear();
+const WHEEL_ITEM_HEIGHT = 48;
 export const UNKNOWN_TIME = "UNKNOWN";
 
 function useIsMobile() {
@@ -53,7 +54,8 @@ function normalizeDateParts(year, monthIndex, day) {
 
 function parseDateValue(value) {
   if (!value) {
-    return new Date();
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
   const [year, month, day] = value.split("-").map(Number);
@@ -166,7 +168,7 @@ function LayerShell({ isMobile, title, children, open, onClose, onConfirm }) {
           onClick={onClose}
           aria-label="关闭选择器"
         />
-        <div className="absolute inset-x-0 bottom-0 rounded-t-[32px] border border-gold-500/18 bg-[linear-gradient(180deg,rgba(18,29,56,0.98),rgba(15,24,47,0.98))] px-4 pb-5 pt-4 shadow-[0_-20px_60px_rgba(4,10,24,0.55)] animate-modal sm:px-6">
+        <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-hidden rounded-t-[32px] border border-gold-500/18 bg-[linear-gradient(180deg,rgba(18,29,56,0.98),rgba(15,24,47,0.98))] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-4 shadow-[0_-20px_60px_rgba(4,10,24,0.55)] animate-modal sm:px-6">
           <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
           <div className="mb-4 flex items-center justify-between gap-4">
             <button
@@ -185,7 +187,7 @@ function LayerShell({ isMobile, title, children, open, onClose, onConfirm }) {
               确定
             </button>
           </div>
-          {children}
+          <div className="max-h-[calc(85vh-92px)] overflow-y-auto pb-1">{children}</div>
         </div>
       </div>
     );
@@ -218,14 +220,85 @@ function LayerShell({ isMobile, title, children, open, onClose, onConfirm }) {
 }
 
 function WheelColumn({ label, options, selectedValue, onSelect, tall = false }) {
+  const scrollRef = useRef(null);
+  const snapTimeoutRef = useRef(null);
+  const heightClass = tall ? "h-[260px]" : "h-[220px]";
+
+  useEffect(() => {
+    const container = scrollRef.current;
+
+    if (!container) {
+      return undefined;
+    }
+
+    const index = options.findIndex((option) => option.value === selectedValue);
+
+    if (index < 0) {
+      return undefined;
+    }
+
+    const targetTop = index * WHEEL_ITEM_HEIGHT;
+    if (Math.abs(container.scrollTop - targetTop) > 2) {
+      container.scrollTop = targetTop;
+    }
+
+    return undefined;
+  }, [options, selectedValue]);
+
+  useEffect(() => () => window.clearTimeout(snapTimeoutRef.current), []);
+
+  const handleScroll = () => {
+    const container = scrollRef.current;
+
+    if (!container || options.length === 0) {
+      return;
+    }
+
+    const index = Math.max(
+      0,
+      Math.min(options.length - 1, Math.round(container.scrollTop / WHEEL_ITEM_HEIGHT))
+    );
+    const option = options[index];
+
+    if (option && option.value !== selectedValue) {
+      onSelect(option.value);
+    }
+
+    window.clearTimeout(snapTimeoutRef.current);
+    snapTimeoutRef.current = window.setTimeout(() => {
+      container.scrollTo({
+        top: index * WHEEL_ITEM_HEIGHT,
+        behavior: "smooth"
+      });
+    }, 80);
+  };
+
+  const handleClick = (value) => {
+    onSelect(value);
+
+    const container = scrollRef.current;
+    const index = options.findIndex((option) => option.value === value);
+
+    if (container && index >= 0) {
+      container.scrollTo({
+        top: index * WHEEL_ITEM_HEIGHT,
+        behavior: "smooth"
+      });
+    }
+  };
+
   return (
     <div className="relative flex-1">
       <div className="mb-3 px-2 text-center text-xs uppercase tracking-[0.25em] text-gold-300/85">
         {label}
       </div>
-      <div className={`relative overflow-hidden rounded-[24px] border border-gold-500/14 bg-white/[0.04] ${tall ? "h-[260px]" : "h-[220px]"}`}>
+      <div className={`relative overflow-hidden rounded-[24px] border border-gold-500/14 bg-white/[0.04] ${heightClass}`}>
         <div className="pointer-events-none absolute inset-x-3 top-1/2 z-10 h-12 -translate-y-1/2 rounded-2xl border border-gold-400/25 bg-gold-400/8 shadow-[0_0_0_1px_rgba(230,195,90,0.08)]" />
-        <div className="h-full snap-y snap-mandatory overflow-y-auto px-3 py-[84px]">
+        <div
+          ref={scrollRef}
+          className="h-full snap-y snap-mandatory overflow-y-auto px-3 py-[84px]"
+          onScroll={handleScroll}
+        >
           <div className="space-y-2">
             {options.map((option) => {
               const active = option.value === selectedValue;
@@ -234,11 +307,9 @@ function WheelColumn({ label, options, selectedValue, onSelect, tall = false }) 
                   key={option.value}
                   type="button"
                   className={`flex h-12 w-full snap-center items-center justify-center rounded-2xl text-base font-semibold transition duration-200 ${
-                    active
-                      ? "bg-gold-400 text-ink-950"
-                      : "text-mist-100 hover:bg-white/8"
+                    active ? "bg-gold-400 text-ink-950" : "text-mist-100 hover:bg-white/8"
                   }`}
-                  onClick={() => onSelect(option.value)}
+                  onClick={() => handleClick(option.value)}
                 >
                   {option.label}
                 </button>
@@ -399,9 +470,7 @@ function DesktopCalendarPanel({
                   key={year}
                   type="button"
                   className={`rounded-2xl px-3 py-3 text-sm font-semibold transition duration-200 ${
-                    active
-                      ? "bg-gold-400 text-ink-950"
-                      : "bg-white/5 text-mist-100 hover:bg-white/10"
+                    active ? "bg-gold-400 text-ink-950" : "bg-white/5 text-mist-100 hover:bg-white/10"
                   }`}
                   onClick={() => onYearSelect(year)}
                 >
@@ -435,9 +504,7 @@ function DesktopCalendarPanel({
                   key={label}
                   type="button"
                   className={`rounded-2xl px-3 py-4 text-sm font-semibold transition duration-200 ${
-                    active
-                      ? "bg-gold-400 text-ink-950"
-                      : "bg-white/5 text-mist-100 hover:bg-white/10"
+                    active ? "bg-gold-400 text-ink-950" : "bg-white/5 text-mist-100 hover:bg-white/10"
                   }`}
                   onClick={() => onMonthSelect(index)}
                 >
@@ -452,7 +519,51 @@ function DesktopCalendarPanel({
   );
 }
 
-function TimePanel({ unknown, hour, minute, onUnknownChange, onHourChange, onMinuteChange }) {
+function MobileTimeWheel({ unknown, hour, minute, onUnknownChange, onHourChange, onMinuteChange }) {
+  const hourOptions = Array.from({ length: 24 }, (_, index) => ({
+    value: `${index}`.padStart(2, "0"),
+    label: `${index}`.padStart(2, "0")
+  }));
+
+  const minuteOptions = Array.from({ length: 60 }, (_, index) => ({
+    value: `${index}`.padStart(2, "0"),
+    label: `${index}`.padStart(2, "0")
+  }));
+
+  return (
+    <div className="space-y-4">
+      <button
+        type="button"
+        className={`w-full rounded-2xl border px-4 py-4 text-left transition duration-200 ${
+          unknown
+            ? "border-gold-300/45 bg-gold-400/12 text-gold-300"
+            : "border-gold-500/18 bg-white/5 text-mist-200 hover:border-gold-300/35 hover:bg-white/10"
+        }`}
+        onClick={() => onUnknownChange(!unknown)}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-base font-semibold">暂不清楚具体出生时间</span>
+          <span className="text-sm">{unknown ? "已选择" : "可选"}</span>
+        </div>
+        <p className="mt-2 text-sm text-mist-400">适用于只知道出生日期，不确定具体时辰的情况。</p>
+      </button>
+
+      {!unknown ? (
+        <div className="grid grid-cols-2 gap-3">
+          <WheelColumn label="小时" options={hourOptions} selectedValue={hour} onSelect={onHourChange} />
+          <WheelColumn
+            label="分钟"
+            options={minuteOptions}
+            selectedValue={minute}
+            onSelect={onMinuteChange}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DesktopTimePanel({ unknown, hour, minute, onUnknownChange, onHourChange, onMinuteChange }) {
   const hourOptions = Array.from({ length: 24 }, (_, index) => `${index}`.padStart(2, "0"));
   const minuteOptions = Array.from({ length: 60 }, (_, index) => `${index}`.padStart(2, "0"));
 
@@ -471,10 +582,10 @@ function TimePanel({ unknown, hour, minute, onUnknownChange, onHourChange, onMin
           <span className="text-base font-semibold">暂不清楚具体出生时间</span>
           <span className="text-sm">{unknown ? "已选择" : "可选"}</span>
         </div>
-        <p className="mt-2 text-sm text-mist-400">适用于只知道出生日期、不确定具体时辰的情况。</p>
+        <p className="mt-2 text-sm text-mist-400">适用于只知道出生日期，不确定具体时辰的情况。</p>
       </button>
 
-      <div className="grid gap-4 grid-cols-2">
+      <div className="grid grid-cols-2 gap-4">
         <div className="rounded-[24px] border border-gold-500/14 bg-white/[0.04] p-3">
           <p className="mb-3 px-2 text-xs uppercase tracking-[0.25em] text-gold-300/85">小时</p>
           <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
@@ -537,10 +648,12 @@ export function DatePickerField({ value, onChange }) {
   const [viewMode, setViewMode] = useState("day");
 
   useEffect(() => {
-    const parsed = parseDateValue(value);
-    setDraftDate(parsed);
-    setActiveMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
-  }, [value]);
+    if (!open) {
+      const parsed = parseDateValue(value);
+      setDraftDate(parsed);
+      setActiveMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
+    }
+  }, [open, value]);
 
   useEffect(() => {
     if (!open || isMobile) {
@@ -569,6 +682,14 @@ export function DatePickerField({ value, onChange }) {
     };
   }, [isMobile, open]);
 
+  const openPicker = () => {
+    const parsed = parseDateValue(value);
+    setDraftDate(parsed);
+    setActiveMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
+    setViewMode("day");
+    setOpen(true);
+  };
+
   const confirm = () => {
     onChange(toDateValue(draftDate));
     setOpen(false);
@@ -582,15 +703,7 @@ export function DatePickerField({ value, onChange }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <PickerTrigger
-        icon="calendar"
-        value={value}
-        onClick={() => {
-          setOpen(true);
-          setViewMode("day");
-        }}
-        active={open}
-      />
+      <PickerTrigger icon="calendar" value={value} onClick={openPicker} active={open} />
       <LayerShell
         isMobile={isMobile}
         title="选择出生日期"
@@ -640,10 +753,12 @@ export function TimePickerField({ value, onChange, helperText }) {
   const [draftUnknown, setDraftUnknown] = useState(parsed.unknown);
 
   useEffect(() => {
-    setDraftHour(parsed.hour);
-    setDraftMinute(parsed.minute);
-    setDraftUnknown(parsed.unknown);
-  }, [parsed]);
+    if (!open) {
+      setDraftHour(parsed.hour);
+      setDraftMinute(parsed.minute);
+      setDraftUnknown(parsed.unknown);
+    }
+  }, [open, parsed.hour, parsed.minute, parsed.unknown]);
 
   useEffect(() => {
     if (!open || isMobile) {
@@ -670,6 +785,14 @@ export function TimePickerField({ value, onChange, helperText }) {
     };
   }, [isMobile, open]);
 
+  const openPicker = () => {
+    const current = parseTimeValue(value);
+    setDraftHour(current.hour);
+    setDraftMinute(current.minute);
+    setDraftUnknown(current.unknown);
+    setOpen(true);
+  };
+
   const confirm = () => {
     onChange(toTimeValue(draftHour, draftMinute, draftUnknown));
     setOpen(false);
@@ -677,7 +800,7 @@ export function TimePickerField({ value, onChange, helperText }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <PickerTrigger icon="clock" value={value} onClick={() => setOpen(true)} active={open} />
+      <PickerTrigger icon="clock" value={value} onClick={openPicker} active={open} />
       {helperText ? <p className="mt-3 text-sm text-mist-400">{helperText}</p> : null}
       <LayerShell
         isMobile={isMobile}
@@ -686,14 +809,25 @@ export function TimePickerField({ value, onChange, helperText }) {
         onClose={() => setOpen(false)}
         onConfirm={confirm}
       >
-        <TimePanel
-          unknown={draftUnknown}
-          hour={draftHour}
-          minute={draftMinute}
-          onUnknownChange={setDraftUnknown}
-          onHourChange={setDraftHour}
-          onMinuteChange={setDraftMinute}
-        />
+        {isMobile ? (
+          <MobileTimeWheel
+            unknown={draftUnknown}
+            hour={draftHour}
+            minute={draftMinute}
+            onUnknownChange={setDraftUnknown}
+            onHourChange={setDraftHour}
+            onMinuteChange={setDraftMinute}
+          />
+        ) : (
+          <DesktopTimePanel
+            unknown={draftUnknown}
+            hour={draftHour}
+            minute={draftMinute}
+            onUnknownChange={setDraftUnknown}
+            onHourChange={setDraftHour}
+            onMinuteChange={setDraftMinute}
+          />
+        )}
       </LayerShell>
     </div>
   );
