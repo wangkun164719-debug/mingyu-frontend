@@ -12,8 +12,11 @@ import {
   steps,
   testimonials
 } from "../data/site";
+import { usePageView } from "../services/analytics";
 
 export default function HomePage() {
+  usePageView("home");
+
   return (
     <div className="pb-4">
       <section className="relative overflow-hidden border-b border-gold-500/10">

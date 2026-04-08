@@ -4,6 +4,12 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  getAnalyticsDailySummary,
+  recordAnalyticsPageView,
+  resolveAnalyticsDateKey,
+  TRACKED_PAGES
+} from "./analyticsStore.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +25,10 @@ const PORT = Number(process.env.PORT || 8787);
 const REPORT_PROVIDER = process.env.REPORT_PROVIDER || "minimax";
 const MINIMAX_MODEL = process.env.MINIMAX_MODEL || "MiniMax-M2.5";
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || "";
+const ANALYTICS_TIMEZONE = process.env.ANALYTICS_TIMEZONE || "Asia/Shanghai";
+const ANALYTICS_API_TOKEN = process.env.ANALYTICS_API_TOKEN || "";
+const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || "";
+const ANALYTICS_DATA_FILE = path.join(__dirname, "data", "analytics.json");
 
 const SECTION_ORDER = ["overall", "personality", "career", "wealth", "relationship", "advice"];
 const PREVIEW_ICONS = ["star", "briefcase", "heart"];
@@ -64,6 +74,25 @@ const BRAND_TONE_APPENDIX = [
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+
+function isAnalyticsAuthorized(request) {
+  if (!ANALYTICS_API_TOKEN) {
+    return true;
+  }
+
+  const headerToken = request.get("x-analytics-token") || "";
+  const queryToken = typeof request.query?.token === "string" ? request.query.token : "";
+
+  return headerToken === ANALYTICS_API_TOKEN || queryToken === ANALYTICS_API_TOKEN;
+}
+
+function getPublicSiteUrl(request) {
+  if (PUBLIC_SITE_URL) {
+    return PUBLIC_SITE_URL;
+  }
+
+  return `${request.protocol}://${request.get("host")}`;
+}
 
 function createPromptPayload(profile) {
   return {
@@ -274,8 +303,57 @@ app.get("/api/health", (_request, response) => {
   response.json({
     ok: true,
     provider: REPORT_PROVIDER,
-    model: MINIMAX_MODEL
+    model: MINIMAX_MODEL,
+    analytics: {
+      trackedPages: Object.keys(TRACKED_PAGES),
+      timeZone: ANALYTICS_TIMEZONE
+    }
   });
+});
+
+app.post("/api/analytics/page-view", (request, response) => {
+  try {
+    const summary = recordAnalyticsPageView({
+      dataFilePath: ANALYTICS_DATA_FILE,
+      pageKey: request.body?.pageKey,
+      visitorId: request.body?.visitorId,
+      occurredAt: new Date(),
+      timeZone: ANALYTICS_TIMEZONE
+    });
+
+    return response.status(202).json({
+      ok: true,
+      date: summary.date
+    });
+  } catch (error) {
+    return response.status(400).json({
+      message: error instanceof Error ? error.message : "埋点写入失败。"
+    });
+  }
+});
+
+app.get("/api/analytics/daily-summary", (request, response) => {
+  if (!isAnalyticsAuthorized(request)) {
+    return response.status(401).json({
+      message: "analytics token 无效。"
+    });
+  }
+
+  try {
+    const dateKey = resolveAnalyticsDateKey(request.query?.date, ANALYTICS_TIMEZONE);
+    const summary = getAnalyticsDailySummary({
+      dataFilePath: ANALYTICS_DATA_FILE,
+      dateKey,
+      timeZone: ANALYTICS_TIMEZONE,
+      siteUrl: getPublicSiteUrl(request)
+    });
+
+    return response.json(summary);
+  } catch (error) {
+    return response.status(400).json({
+      message: error instanceof Error ? error.message : "日报生成失败。"
+    });
+  }
 });
 
 app.post("/api/report/preview", async (request, response) => {

@@ -13,5 +13,11 @@ services:
         value: minimax
       - key: MINIMAX_MODEL
         value: MiniMax-M2.5
+      - key: ANALYTICS_TIMEZONE
+        value: Asia/Shanghai
+      - key: PUBLIC_SITE_URL
+        value: http://39.101.77.13
+      - key: ANALYTICS_API_TOKEN
+        sync: false
       - key: MINIMAX_API_KEY
         sync: false

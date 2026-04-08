@@ -5,6 +5,7 @@ import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import IconBadge from "../components/IconBadge";
 import { preferenceOptions } from "../data/site";
+import { usePageView } from "../services/analytics";
 import { saveLatestProfile } from "../services/reportApi";
 
 const initialForm = {
@@ -83,6 +84,8 @@ function FieldError({ message }) {
 }
 
 export default function InfoFormPage() {
+  usePageView("measure");
+
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});

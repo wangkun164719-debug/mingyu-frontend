@@ -12,6 +12,7 @@ import {
   peekFullReport,
   saveLatestProfile
 } from "../services/reportApi";
+import { usePageView } from "../services/analytics";
 
 function formatBirthMeta(profile) {
   const timeText = profile.birthTime === UNKNOWN_TIME ? "时辰待补充" : profile.birthTime;
@@ -94,6 +95,8 @@ function orderSections(report) {
 }
 
 export default function DetailReportPage() {
+  usePageView("report");
+
   const { state } = useLocation();
   const profile = useMemo(
     () => state?.profile ?? loadLatestProfile() ?? defaultProfile,
@@ -264,4 +267,3 @@ export default function DetailReportPage() {
     </div>
   );
 }
-

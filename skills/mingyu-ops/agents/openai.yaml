@@ -1,0 +1,4 @@
+interface:
+  display_name: "MingYu Ops"
+  short_description: "Review MingYu funnel metrics and propose daily growth actions."
+  default_prompt: "Use $mingyu-ops to review yesterday's analytics and propose today's growth actions."
