@@ -30,8 +30,10 @@ Default site:
 Default analytics endpoint:
 `http://39.101.77.13/api/analytics/daily-summary?date=yesterday`
 
-If a token is provided, send it with header:
+Send the analytics token with header:
 `x-analytics-token: <token>`
+
+If the token is missing, report that the analytics endpoint is protected and cannot be read.
 
 Treat the API response as authoritative.
 Do not infer fake numbers.
