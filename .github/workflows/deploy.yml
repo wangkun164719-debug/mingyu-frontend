@@ -16,14 +16,7 @@ jobs:
 
       - name: Create release archive
         run: |
-          tar \
-            --exclude=.git \
-            --exclude=node_modules \
-            --exclude=dist \
-            --exclude=.github \
-            --exclude=release.tar.gz \
-            -czf release.tar.gz .
-
+          git archive --format=tar.gz --output=release.tar.gz HEAD
           ls -lh release.tar.gz
 
       - name: Upload release archive
