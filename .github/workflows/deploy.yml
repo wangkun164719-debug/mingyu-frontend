@@ -16,12 +16,13 @@ jobs:
 
       - name: Create release archive
         run: |
+          mkdir -p /tmp/mingyu-release
           tar \
             --exclude=.git \
             --exclude=node_modules \
             --exclude=dist \
             --exclude=.github \
-            -czf release.tar.gz .
+            -czf /tmp/mingyu-release/release.tar.gz .
 
       - name: Upload release archive
         uses: appleboy/scp-action@v0.1.7
@@ -29,7 +30,7 @@ jobs:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_USER }}
           key: ${{ secrets.ALIYUN_SSH_KEY }}
-          source: "release.tar.gz"
+          source: "/tmp/mingyu-release/release.tar.gz"
           target: "/tmp"
 
       - name: Deploy over SSH
