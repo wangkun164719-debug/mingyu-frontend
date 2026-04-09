@@ -1,0 +1,28 @@
+name: Deploy To Aliyun ECS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ALIYUN_HOST }}
+          username: ${{ secrets.ALIYUN_USER }}
+          key: ${{ secrets.ALIYUN_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /www/wwwroot/mingyu-frontend
+            git pull origin main
+            npm ci
+            npm run build
+            pm2 restart mingyu
+            pm2 save
+            curl -f http://127.0.0.1:8787/api/health
