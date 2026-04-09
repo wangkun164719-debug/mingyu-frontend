@@ -11,6 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create release archive
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=dist \
+            --exclude=.github \
+            -czf release.tar.gz .
+
+      - name: Upload release archive
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ALIYUN_HOST }}
+          username: ${{ secrets.ALIYUN_USER }}
+          key: ${{ secrets.ALIYUN_SSH_KEY }}
+          source: "release.tar.gz"
+          target: "/tmp"
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -19,10 +40,42 @@ jobs:
           key: ${{ secrets.ALIYUN_SSH_KEY }}
           script_stop: true
           script: |
-            cd /www/wwwroot/mingyu-frontend
-            git pull origin main
+            set -e
+
+            APP_DIR=/www/wwwroot/mingyu-frontend
+            TMP_DIR=/tmp/mingyu-frontend-release
+            ARCHIVE=/tmp/release.tar.gz
+
+            rm -rf "$TMP_DIR"
+            mkdir -p "$TMP_DIR"
+            tar -xzf "$ARCHIVE" -C "$TMP_DIR"
+
+            if [ -f "$APP_DIR/server/.env" ]; then
+              cp "$APP_DIR/server/.env" /tmp/mingyu-server.env.bak
+            fi
+
+            if [ -d "$APP_DIR/server/data" ]; then
+              rm -rf /tmp/mingyu-server-data.bak
+              cp -r "$APP_DIR/server/data" /tmp/mingyu-server-data.bak
+            fi
+
+            mkdir -p "$APP_DIR"
+            cp -r "$TMP_DIR"/. "$APP_DIR"/
+
+            if [ -f /tmp/mingyu-server.env.bak ]; then
+              cp /tmp/mingyu-server.env.bak "$APP_DIR/server/.env"
+            fi
+
+            if [ -d /tmp/mingyu-server-data.bak ]; then
+              rm -rf "$APP_DIR/server/data"
+              cp -r /tmp/mingyu-server-data.bak "$APP_DIR/server/data"
+            fi
+
+            cd "$APP_DIR"
             npm ci
             npm run build
-            pm2 restart mingyu
+            pm2 restart mingyu --update-env
             pm2 save
             curl -f http://127.0.0.1:8787/api/health
+
+            rm -rf "$TMP_DIR" "$ARCHIVE"
