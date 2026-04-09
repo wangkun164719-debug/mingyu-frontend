@@ -23,8 +23,9 @@ const app = express();
 
 const PORT = Number(process.env.PORT || 8787);
 const REPORT_PROVIDER = process.env.REPORT_PROVIDER || "minimax";
-const MINIMAX_MODEL = process.env.MINIMAX_MODEL || "MiniMax-M2.5";
+const MINIMAX_MODEL = process.env.MINIMAX_MODEL || "MiniMax-M2.7";
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || "";
+const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || "https://api.minimaxi.com/v1";
 const ANALYTICS_TIMEZONE = process.env.ANALYTICS_TIMEZONE || "Asia/Shanghai";
 const ANALYTICS_API_TOKEN = process.env.ANALYTICS_API_TOKEN || "";
 const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || "";
@@ -197,7 +198,7 @@ async function callMiniMax(prompt, maxTokens) {
     throw new Error("MiniMax API Key 未配置。");
   }
 
-  const response = await fetch("https://api.minimax.io/v1/chat/completions", {
+  const response = await fetch(`${MINIMAX_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${MINIMAX_API_KEY}`,

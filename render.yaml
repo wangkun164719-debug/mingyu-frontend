@@ -12,7 +12,9 @@ services:
       - key: REPORT_PROVIDER
         value: minimax
       - key: MINIMAX_MODEL
-        value: MiniMax-M2.5
+        value: MiniMax-M2.7
+      - key: MINIMAX_BASE_URL
+        value: https://api.minimaxi.com/v1
       - key: ANALYTICS_TIMEZONE
         value: Asia/Shanghai
       - key: PUBLIC_SITE_URL
