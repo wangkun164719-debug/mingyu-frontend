@@ -6,9 +6,16 @@ on:
     branches:
       - main
 
+run-name: Deploy ${{ github.sha }} to Aliyun ECS
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -16,11 +23,14 @@ jobs:
 
       - name: Create release archive
         run: |
+          set -euo pipefail
+
+          echo "Creating release archive from commit $GITHUB_SHA"
           git archive --format=tar.gz --output=release.tar.gz HEAD
           ls -lh release.tar.gz
 
       - name: Upload release archive
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_USER }}
@@ -30,49 +40,73 @@ jobs:
           overwrite: true
 
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_USER }}
           key: ${{ secrets.ALIYUN_SSH_KEY }}
           script_stop: true
+          command_timeout: 20m
           script: |
-            set -e
+            set -euo pipefail
 
             APP_DIR=/www/wwwroot/mingyu-frontend
             TMP_DIR=/tmp/mingyu-frontend-release
             ARCHIVE=/tmp/release.tar.gz
+            ENV_BAK=/tmp/mingyu-server.env.bak
+            DATA_BAK=/tmp/mingyu-server-data.bak
 
+            cleanup() {
+              rm -rf "$TMP_DIR" "$ARCHIVE" "$ENV_BAK" "$DATA_BAK"
+            }
+
+            trap cleanup EXIT
+
+            echo "==> Preparing release workspace"
             rm -rf "$TMP_DIR"
             mkdir -p "$TMP_DIR"
+
+            echo "==> Extracting uploaded archive"
             tar -xzf "$ARCHIVE" -C "$TMP_DIR"
 
             if [ -f "$APP_DIR/server/.env" ]; then
-              cp "$APP_DIR/server/.env" /tmp/mingyu-server.env.bak
+              echo "==> Backing up server/.env"
+              cp "$APP_DIR/server/.env" "$ENV_BAK"
             fi
 
             if [ -d "$APP_DIR/server/data" ]; then
-              rm -rf /tmp/mingyu-server-data.bak
-              cp -r "$APP_DIR/server/data" /tmp/mingyu-server-data.bak
+              echo "==> Backing up server/data"
+              rm -rf "$DATA_BAK"
+              cp -r "$APP_DIR/server/data" "$DATA_BAK"
             fi
 
+            echo "==> Syncing release files into app directory"
             mkdir -p "$APP_DIR"
             cp -r "$TMP_DIR"/. "$APP_DIR"/
 
-            if [ -f /tmp/mingyu-server.env.bak ]; then
-              cp /tmp/mingyu-server.env.bak "$APP_DIR/server/.env"
+            if [ -f "$ENV_BAK" ]; then
+              echo "==> Restoring server/.env"
+              cp "$ENV_BAK" "$APP_DIR/server/.env"
             fi
 
-            if [ -d /tmp/mingyu-server-data.bak ]; then
+            if [ -d "$DATA_BAK" ]; then
+              echo "==> Restoring server/data"
               rm -rf "$APP_DIR/server/data"
-              cp -r /tmp/mingyu-server-data.bak "$APP_DIR/server/data"
+              cp -r "$DATA_BAK" "$APP_DIR/server/data"
             fi
 
+            echo "==> Installing dependencies"
             cd "$APP_DIR"
             npm ci
+
+            echo "==> Building production assets"
             npm run build
+
+            echo "==> Restarting PM2 app"
             pm2 restart mingyu --update-env
             pm2 save
+
+            echo "==> Running local health check"
             curl -f http://127.0.0.1:8787/api/health
 
-            rm -rf "$TMP_DIR" "$ARCHIVE"
+            echo "==> Deployment completed"
