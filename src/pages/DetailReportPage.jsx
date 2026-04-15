@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { UNKNOWN_TIME } from "../components/BirthPickerField";
+import { formatBirthTimeDisplay } from "../components/BirthPickerField";
 import IconBadge from "../components/IconBadge";
 import { BackIcon } from "../components/Icons";
 import PageSection from "../components/PageSection";
@@ -15,8 +15,28 @@ import {
 import { usePageView } from "../services/analytics";
 
 function formatBirthMeta(profile) {
-  const timeText = profile.birthTime === UNKNOWN_TIME ? "时辰待补充" : profile.birthTime;
+  const timeText = profile.birthTime ? formatBirthTimeDisplay(profile.birthTime) : "时辰待补充";
   return `出生于 ${profile.birthDate} ${timeText} · ${profile.birthPlace}`;
+}
+
+function asList(items) {
+  return Array.isArray(items) ? items.filter(Boolean) : [];
+}
+
+function getFinalMessage(report) {
+  return report?.final_message || report?.finalMessage || "";
+}
+
+function orderSections(report) {
+  if (!report?.sections) {
+    return [];
+  }
+
+  const explicitOrder = Array.isArray(report.sectionOrder) ? report.sectionOrder : null;
+  const fallbackOrder = ["overall", "personality", "career", "wealth", "relationship", "advice"];
+  const order = explicitOrder?.length ? explicitOrder : fallbackOrder;
+
+  return order.map((key) => report.sections[key]).filter(Boolean);
 }
 
 function LoadingState() {
@@ -62,7 +82,7 @@ function ErrorState({ onRetry }) {
         </div>
         <h3 className="mt-5 text-2xl font-semibold text-white">详细报告暂时未能加载</h3>
         <p className="mt-3 text-sm leading-7 text-mist-300 sm:text-base">
-          AI 报告请求这次没有顺利完成。你可以直接重试，我们会继续沿用刚才填写的信息。
+          这次 AI 请求没有顺利完成。你可以直接重试，我们会继续沿用刚才填写的信息。
         </p>
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:justify-center">
           <button
@@ -84,14 +104,33 @@ function ErrorState({ onRetry }) {
   );
 }
 
-function orderSections(report) {
-  if (!report?.sections) {
-    return [];
+function InsightGroup({ title, items, accent }) {
+  const list = asList(items);
+
+  if (!list.length) {
+    return null;
   }
 
-  return ["overall", "personality", "career", "wealth", "relationship", "advice"]
-    .map((key) => report.sections[key])
-    .filter(Boolean);
+  const accentClass =
+    accent === "gold"
+      ? "border-gold-400/18 bg-gold-400/8"
+      : accent === "rose"
+        ? "border-rose-300/18 bg-rose-300/8"
+        : "border-white/10 bg-white/5";
+
+  return (
+    <div className={`rounded-[24px] border p-5 ${accentClass}`}>
+      <h4 className="text-sm font-semibold tracking-[0.18em] text-mist-100">{title}</h4>
+      <ul className="mt-4 space-y-3">
+        {list.map((item) => (
+          <li key={item} className="flex gap-3 text-sm leading-7 text-mist-200">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold-300" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default function DetailReportPage() {
@@ -103,8 +142,9 @@ export default function DetailReportPage() {
     [state]
   );
 
-  const [report, setReport] = useState(() => peekFullReport(profile));
-  const [loading, setLoading] = useState(() => !peekFullReport(profile));
+  const cachedReport = useMemo(() => peekFullReport(profile), [profile]);
+  const [report, setReport] = useState(cachedReport);
+  const [loading, setLoading] = useState(() => !cachedReport);
   const [error, setError] = useState("");
 
   const loadReport = useCallback(
@@ -129,8 +169,9 @@ export default function DetailReportPage() {
   }, [profile]);
 
   useEffect(() => {
-    setReport(peekFullReport(profile));
-    setLoading(!peekFullReport(profile));
+    const nextCachedReport = peekFullReport(profile);
+    setReport(nextCachedReport);
+    setLoading(!nextCachedReport);
     setError("");
   }, [profile]);
 
@@ -170,6 +211,11 @@ export default function DetailReportPage() {
   }, [profile]);
 
   const sections = orderSections(report);
+  const finalMessage = getFinalMessage(report);
+  const keySignals = asList(report?.keySignals);
+  const actionPlan = asList(report?.actionPlan);
+  const priorities = asList(report?.strategicFocus?.priorities);
+  const cautions = asList(report?.strategicFocus?.cautions);
 
   return (
     <div className="pb-6">
@@ -185,7 +231,7 @@ export default function DetailReportPage() {
 
       <PageSection className="pt-6">
         <SectionTitle
-          title={report?.title || `${profile.name || "命主"}的命理解读`}
+          title={report?.title || `${profile.name || "命主"}的详细解析`}
           subtitle={formatBirthMeta(profile)}
         />
       </PageSection>
@@ -197,13 +243,26 @@ export default function DetailReportPage() {
         <>
           <PageSection className="pt-12">
             <div className="panel p-6 sm:p-8 lg:p-10">
-              <h3 className="flex items-center gap-3 text-3xl font-semibold text-white">
-                <IconBadge icon="star" className="h-12 w-12 rounded-2xl" />
-                命理概览
-              </h3>
-              <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">{report.summary}</p>
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-3xl">
+                  <h3 className="flex items-center gap-3 text-3xl font-semibold text-white">
+                    <IconBadge icon="star" className="h-12 w-12 rounded-2xl" />
+                    命理概览
+                  </h3>
+                  <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
+                    {report.summary}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-gold-400/14 bg-white/5 px-5 py-4 text-sm text-mist-300 lg:max-w-xs">
+                  <p className="font-semibold tracking-[0.16em] text-gold-200">阅读建议</p>
+                  <p className="mt-3 leading-7">
+                    先看总评与阶段判断，再看各主题下的风险提醒和行动建议，这样更容易把报告转成实际决策。
+                  </p>
+                </div>
+              </div>
+
               <div className="mt-8 grid gap-4 lg:grid-cols-3">
-                {report.overviewCards.map((item) => (
+                {asList(report.overviewCards).map((item) => (
                   <div
                     key={item.label}
                     className="rounded-[26px] border border-gold-500/12 bg-white/5 px-5 py-6 text-center"
@@ -213,39 +272,130 @@ export default function DetailReportPage() {
                   </div>
                 ))}
               </div>
+
+              {keySignals.length ? (
+                <div className="mt-8 grid gap-4 lg:grid-cols-3">
+                  {keySignals.map((item) => (
+                    <div
+                      key={`${item.label}-${item.value}`}
+                      className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-6"
+                    >
+                      <p className="text-xs font-semibold tracking-[0.18em] text-mist-400">
+                        {item.label}
+                      </p>
+                      <p className="mt-3 text-2xl font-semibold text-white">{item.value}</p>
+                      {item.detail ? (
+                        <p className="mt-3 text-sm leading-7 text-mist-300">{item.detail}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </PageSection>
+
+          {report.strategicFocus ? (
+            <PageSection className="pt-6">
+              <div className="panel p-6 sm:p-8 lg:p-10">
+                <div className="flex items-center gap-3">
+                  <IconBadge icon="target" className="h-11 w-11 rounded-2xl" />
+                  <div>
+                    <h3 className="text-2xl font-semibold text-white">
+                      {report.strategicFocus.title || "现阶段判断"}
+                    </h3>
+                    <p className="mt-1 text-sm text-mist-400">先抓重点，再扩展动作</p>
+                  </div>
+                </div>
+                <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
+                  {report.strategicFocus.summary}
+                </p>
+
+                <div className="mt-8 grid gap-4 lg:grid-cols-2">
+                  <InsightGroup title="优先推进" items={priorities} accent="gold" />
+                  <InsightGroup title="特别留意" items={cautions} accent="rose" />
+                </div>
+              </div>
+            </PageSection>
+          ) : null}
 
           <PageSection className="space-y-5 pt-6">
             {sections.map((section) => (
               <article key={section.title} className="panel p-6 sm:p-8 lg:p-10">
-                <h3 className="flex items-center gap-3 text-2xl font-semibold text-white">
-                  <IconBadge icon={section.icon} className="h-11 w-11 rounded-2xl" />
-                  {section.title}
-                </h3>
-                <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
-                  {section.description}
-                </p>
-                {section.score ? (
-                  <p className="mt-4 text-sm font-semibold text-gold-300">{section.score}</p>
-                ) : null}
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-3xl">
+                    <h3 className="flex items-center gap-3 text-2xl font-semibold text-white">
+                      <IconBadge icon={section.icon} className="h-11 w-11 rounded-2xl" />
+                      {section.title}
+                    </h3>
+                    <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
+                      {section.description}
+                    </p>
+                  </div>
+                  {section.score ? (
+                    <div className="rounded-full border border-gold-300/25 bg-gold-400/10 px-4 py-2 text-sm font-semibold text-gold-200">
+                      {section.score}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-8 grid gap-4 lg:grid-cols-3">
+                  <InsightGroup title="核心判断" items={section.highlights} accent="gold" />
+                  <InsightGroup title="风险提醒" items={section.cautions} accent="rose" />
+                  <InsightGroup title="可执行动作" items={section.actions} />
+                </div>
               </article>
             ))}
-
-            <article className="panel p-6 sm:p-8 lg:p-10">
-              <h3 className="flex items-center gap-3 text-2xl font-semibold text-gold-300">
-                <IconBadge icon="star" className="h-11 w-11 rounded-2xl" />
-                命语寄语
-              </h3>
-              <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
-                “{report.final_message}”
-              </p>
-            </article>
           </PageSection>
+
+          {actionPlan.length ? (
+            <PageSection className="pt-6">
+              <div className="panel p-6 sm:p-8 lg:p-10">
+                <h3 className="flex items-center gap-3 text-2xl font-semibold text-white">
+                  <IconBadge icon="calendar" className="h-11 w-11 rounded-2xl" />
+                  下一阶段行动路线
+                </h3>
+                <p className="mt-4 text-sm leading-8 text-mist-300 sm:text-base">
+                  这部分是把命理解读转成现实动作的关键。先做收拢，再做稳定推进，最后再考虑放大。
+                </p>
+
+                <div className="mt-8 grid gap-4 lg:grid-cols-3">
+                  {actionPlan.map((item) => (
+                    <div
+                      key={`${item.title}-${item.horizon}`}
+                      className="rounded-[24px] border border-gold-500/12 bg-white/5 p-5"
+                    >
+                      <div className="flex items-center gap-3">
+                        <IconBadge icon={item.icon || "target"} className="h-10 w-10 rounded-xl" />
+                        <div>
+                          <p className="text-sm font-semibold text-white">{item.title}</p>
+                          <p className="text-xs tracking-[0.14em] text-gold-200">{item.horizon}</p>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm leading-7 text-mist-300">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </PageSection>
+          ) : null}
+
+          {finalMessage ? (
+            <PageSection className="pt-6">
+              <article className="panel p-6 sm:p-8 lg:p-10">
+                <h3 className="flex items-center gap-3 text-2xl font-semibold text-gold-300">
+                  <IconBadge icon="star" className="h-11 w-11 rounded-2xl" />
+                  命语寄语
+                </h3>
+                <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
+                  “{finalMessage}”
+                </p>
+              </article>
+            </PageSection>
+          ) : null}
 
           <PageSection className="py-14 text-center">
             <p className="text-sm text-mist-300">
-              以上解读仅供参考，具体情况还需结合个人实际综合分析
+              以上解读仅供参考，具体情况仍需结合个人实际综合分析。
             </p>
             <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Link

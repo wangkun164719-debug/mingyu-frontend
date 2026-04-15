@@ -8,6 +8,41 @@ const MIN_YEAR = 1940;
 const MAX_YEAR = new Date().getFullYear();
 const WHEEL_ITEM_HEIGHT = 48;
 export const UNKNOWN_TIME = "UNKNOWN";
+const SHICHEN_PREFIX = "SHICHEN";
+const TIME_INPUT_MODE = {
+  SHICHEN: "shichen",
+  EXACT: "exact",
+  UNKNOWN: "unknown"
+};
+const SHICHEN_OPTIONS = [
+  { key: "zi", label: "子时", range: "23:00-00:59", hour: "00", minute: "00" },
+  { key: "chou", label: "丑时", range: "01:00-02:59", hour: "02", minute: "00" },
+  { key: "yin", label: "寅时", range: "03:00-04:59", hour: "04", minute: "00" },
+  { key: "mao", label: "卯时", range: "05:00-06:59", hour: "06", minute: "00" },
+  { key: "chen", label: "辰时", range: "07:00-08:59", hour: "08", minute: "00" },
+  { key: "si", label: "巳时", range: "09:00-10:59", hour: "10", minute: "00" },
+  { key: "wu", label: "午时", range: "11:00-12:59", hour: "12", minute: "00" },
+  { key: "wei", label: "未时", range: "13:00-14:59", hour: "14", minute: "00" },
+  { key: "shen", label: "申时", range: "15:00-16:59", hour: "16", minute: "00" },
+  { key: "you", label: "酉时", range: "17:00-18:59", hour: "18", minute: "00" },
+  { key: "xu", label: "戌时", range: "19:00-20:59", hour: "20", minute: "00" },
+  { key: "hai", label: "亥时", range: "21:00-22:59", hour: "22", minute: "00" }
+];
+
+function getShichenOption(key) {
+  return SHICHEN_OPTIONS.find((item) => item.key === key) || null;
+}
+
+function isFutureTimeChoice(hour, minute, maxHour, maxMinute) {
+  const numericHour = Number(hour);
+  const numericMinute = Number(minute);
+
+  if (numericHour > maxHour) {
+    return true;
+  }
+
+  return numericHour === maxHour && numericMinute > maxMinute;
+}
 
 function getTodayDate() {
   const now = new Date();
@@ -57,11 +92,61 @@ function formatTimeDisplay(value) {
     return "请选择出生时间";
   }
 
-  if (value === UNKNOWN_TIME) {
-    return "暂不清楚具体出生时间";
+  return formatBirthTimeDisplay(value);
+}
+
+export function parseBirthTimeValue(value) {
+  if (!value) {
+    return {
+      mode: TIME_INPUT_MODE.EXACT,
+      hour: "12",
+      minute: "00",
+      unknown: false,
+      shichenKey: "",
+      shichenLabel: "",
+      range: ""
+    };
   }
 
-  return value;
+  if (value === UNKNOWN_TIME) {
+    return {
+      mode: TIME_INPUT_MODE.UNKNOWN,
+      hour: "12",
+      minute: "00",
+      unknown: true,
+      shichenKey: "",
+      shichenLabel: "",
+      range: ""
+    };
+  }
+
+  if (value.startsWith(`${SHICHEN_PREFIX}:`)) {
+    const [, key, rawHour, rawMinute] = value.split(":");
+    const option = getShichenOption(key);
+    const hour = rawHour || option?.hour || "00";
+    const minute = rawMinute || option?.minute || "00";
+
+    return {
+      mode: TIME_INPUT_MODE.SHICHEN,
+      hour,
+      minute,
+      unknown: false,
+      shichenKey: key || "",
+      shichenLabel: option?.label || "时辰",
+      range: option?.range || ""
+    };
+  }
+
+  const [hour = "12", minute = "00"] = value.split(":");
+  return {
+    mode: TIME_INPUT_MODE.EXACT,
+    hour,
+    minute,
+    unknown: false,
+    shichenKey: "",
+    shichenLabel: "",
+    range: ""
+  };
 }
 
 function daysInMonth(year, monthIndex) {
@@ -124,20 +209,38 @@ function shiftMonth(date, offset) {
 }
 
 function parseTimeValue(value) {
-  if (!value || value === UNKNOWN_TIME) {
-    return { hour: "12", minute: "00", unknown: value === UNKNOWN_TIME };
-  }
-
-  const [hour, minute] = value.split(":");
-  return { hour, minute, unknown: false };
+  return parseBirthTimeValue(value);
 }
 
-function toTimeValue(hour, minute, unknown) {
-  if (unknown) {
+function toTimeValue({ mode, hour, minute, shichenKey }) {
+  if (mode === TIME_INPUT_MODE.UNKNOWN) {
     return UNKNOWN_TIME;
   }
 
+  if (mode === TIME_INPUT_MODE.SHICHEN) {
+    const option = getShichenOption(shichenKey) || SHICHEN_OPTIONS[0];
+    return `${SHICHEN_PREFIX}:${option.key}:${option.hour}:${option.minute}`;
+  }
+
   return `${hour}:${minute}`;
+}
+
+export function formatBirthTimeDisplay(value) {
+  if (!value) {
+    return "请选择出生时间";
+  }
+
+  if (value === UNKNOWN_TIME) {
+    return "暂不清楚具体出生时间";
+  }
+
+  const parsed = parseBirthTimeValue(value);
+
+  if (parsed.mode === TIME_INPUT_MODE.SHICHEN) {
+    return `${parsed.shichenLabel} ${parsed.range}`;
+  }
+
+  return `${parsed.hour}:${parsed.minute}`;
 }
 
 function PickerTrigger({ icon, value, onClick, active }) {
@@ -575,13 +678,84 @@ function DesktopCalendarPanel({
   );
 }
 
-function MobileTimeWheel({
-  unknown,
+function TimeModeTabs({ mode, onChange }) {
+  const items = [
+    { key: TIME_INPUT_MODE.SHICHEN, label: "按时辰" },
+    { key: TIME_INPUT_MODE.EXACT, label: "精确时间" },
+    { key: TIME_INPUT_MODE.UNKNOWN, label: "暂不清楚" }
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-2 rounded-[24px] border border-gold-500/14 bg-white/[0.04] p-2">
+      {items.map((item) => {
+        const active = mode === item.key;
+        return (
+          <button
+            key={item.key}
+            type="button"
+            className={`rounded-2xl px-3 py-3 text-sm font-semibold transition duration-200 ${
+              active ? "bg-gold-400 text-ink-950" : "text-mist-200 hover:bg-white/10"
+            }`}
+            onClick={() => onChange(item.key)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ShichenOptionGrid({ options, selectedKey, onSelect }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {options.map((option) => {
+        const active = option.key === selectedKey;
+
+        return (
+          <button
+            key={option.key}
+            type="button"
+            disabled={option.disabled}
+            className={`rounded-[24px] border px-4 py-4 text-left transition duration-200 ${
+              active
+                ? "border-gold-300/45 bg-gold-400/12 text-gold-200"
+                : option.disabled
+                  ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-mist-500/40"
+                  : "border-gold-500/18 bg-white/5 text-mist-100 hover:border-gold-300/35 hover:bg-white/10"
+            }`}
+            onClick={() => {
+              if (!option.disabled) {
+                onSelect(option.key);
+              }
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-base font-semibold">{option.label}</span>
+              {active ? <span className="text-xs font-semibold tracking-[0.14em]">已选</span> : null}
+            </div>
+            <p className="mt-2 text-sm text-mist-300">{option.range}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function UnknownTimeState() {
+  return (
+    <div className="rounded-[24px] border border-gold-300/25 bg-gold-400/10 px-5 py-5 text-sm leading-7 text-mist-200">
+      <p className="font-semibold text-gold-200">已选择“暂不清楚”</p>
+      <p className="mt-2">适用于只知道出生日期，不确定具体时辰的情况，后续报告会以更稳妥的判断输出。</p>
+    </div>
+  );
+}
+
+function MobileExactTimeWheel({
   hour,
   minute,
   maxHour,
   maxMinute,
-  onUnknownChange,
   onHourChange,
   onMinuteChange
 }) {
@@ -597,45 +771,23 @@ function MobileTimeWheel({
   }));
 
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        className={`w-full rounded-2xl border px-4 py-4 text-left transition duration-200 ${
-          unknown
-            ? "border-gold-300/45 bg-gold-400/12 text-gold-300"
-            : "border-gold-500/18 bg-white/5 text-mist-200 hover:border-gold-300/35 hover:bg-white/10"
-        }`}
-        onClick={() => onUnknownChange(!unknown)}
-      >
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-base font-semibold">暂不清楚具体出生时间</span>
-          <span className="text-sm">{unknown ? "已选择" : "可选"}</span>
-        </div>
-        <p className="mt-2 text-sm text-mist-400">适用于只知道出生日期，不确定具体时辰的情况。</p>
-      </button>
-
-      {!unknown ? (
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <WheelColumn label="小时" options={hourOptions} selectedValue={hour} onSelect={onHourChange} />
-          <WheelColumn
-            label="分钟"
-            options={minuteOptions}
-            selectedValue={minute}
-            onSelect={onMinuteChange}
-          />
-        </div>
-      ) : null}
+    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <WheelColumn label="小时" options={hourOptions} selectedValue={hour} onSelect={onHourChange} />
+      <WheelColumn
+        label="分钟"
+        options={minuteOptions}
+        selectedValue={minute}
+        onSelect={onMinuteChange}
+      />
     </div>
   );
 }
 
-function DesktopTimePanel({
-  unknown,
+function DesktopExactTimePanel({
   hour,
   minute,
   maxHour,
   maxMinute,
-  onUnknownChange,
   onHourChange,
   onMinuteChange
 }) {
@@ -644,68 +796,40 @@ function DesktopTimePanel({
   const minuteOptions = Array.from({ length: minuteLimit + 1 }, (_, index) => `${index}`.padStart(2, "0"));
 
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        className={`w-full rounded-2xl border px-4 py-4 text-left transition duration-200 ${
-          unknown
-            ? "border-gold-300/45 bg-gold-400/12 text-gold-300"
-            : "border-gold-500/18 bg-white/5 text-mist-200 hover:border-gold-300/35 hover:bg-white/10"
-        }`}
-        onClick={() => onUnknownChange(!unknown)}
-      >
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-base font-semibold">暂不清楚具体出生时间</span>
-          <span className="text-sm">{unknown ? "已选择" : "可选"}</span>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="rounded-[24px] border border-gold-500/14 bg-white/[0.04] p-3">
+        <p className="mb-3 px-2 text-xs uppercase tracking-[0.25em] text-gold-300/85">小时</p>
+        <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
+          {hourOptions.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`w-full rounded-2xl px-4 py-3 text-base font-semibold transition duration-200 ${
+                hour === item ? "bg-gold-400 text-ink-950" : "bg-white/5 text-mist-100 hover:bg-white/10"
+              }`}
+              onClick={() => onHourChange(item)}
+            >
+              {item}
+            </button>
+          ))}
         </div>
-        <p className="mt-2 text-sm text-mist-400">适用于只知道出生日期，不确定具体时辰的情况。</p>
-      </button>
+      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-[24px] border border-gold-500/14 bg-white/[0.04] p-3">
-          <p className="mb-3 px-2 text-xs uppercase tracking-[0.25em] text-gold-300/85">小时</p>
-          <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
-            {hourOptions.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`w-full rounded-2xl px-4 py-3 text-base font-semibold transition duration-200 ${
-                  hour === item && !unknown
-                    ? "bg-gold-400 text-ink-950"
-                    : "bg-white/5 text-mist-100 hover:bg-white/10"
-                }`}
-                onClick={() => {
-                  onUnknownChange(false);
-                  onHourChange(item);
-                }}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-[24px] border border-gold-500/14 bg-white/[0.04] p-3">
-          <p className="mb-3 px-2 text-xs uppercase tracking-[0.25em] text-gold-300/85">分钟</p>
-          <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
-            {minuteOptions.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`w-full rounded-2xl px-4 py-3 text-base font-semibold transition duration-200 ${
-                  minute === item && !unknown
-                    ? "bg-gold-400 text-ink-950"
-                    : "bg-white/5 text-mist-100 hover:bg-white/10"
-                }`}
-                onClick={() => {
-                  onUnknownChange(false);
-                  onMinuteChange(item);
-                }}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+      <div className="rounded-[24px] border border-gold-500/14 bg-white/[0.04] p-3">
+        <p className="mb-3 px-2 text-xs uppercase tracking-[0.25em] text-gold-300/85">分钟</p>
+        <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
+          {minuteOptions.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`w-full rounded-2xl px-4 py-3 text-base font-semibold transition duration-200 ${
+                minute === item ? "bg-gold-400 text-ink-950" : "bg-white/5 text-mist-100 hover:bg-white/10"
+              }`}
+              onClick={() => onMinuteChange(item)}
+            >
+              {item}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -839,7 +963,21 @@ export function TimePickerField({ value, onChange, helperText, selectedDate }) {
   const maxMinute = limitToNow ? now.getMinutes() : 59;
   const [draftHour, setDraftHour] = useState(parsed.hour);
   const [draftMinute, setDraftMinute] = useState(parsed.minute);
-  const [draftUnknown, setDraftUnknown] = useState(parsed.unknown);
+  const [draftMode, setDraftMode] = useState(parsed.mode);
+  const [draftShichenKey, setDraftShichenKey] = useState(parsed.shichenKey);
+
+  const shichenOptions = useMemo(
+    () =>
+      SHICHEN_OPTIONS.map((option) => ({
+        ...option,
+        disabled: limitToNow
+          ? isFutureTimeChoice(option.hour, option.minute, maxHour, maxMinute)
+          : false
+      })),
+    [limitToNow, maxHour, maxMinute]
+  );
+  const firstAvailableShichenKey =
+    shichenOptions.find((item) => !item.disabled)?.key ?? SHICHEN_OPTIONS[0].key;
 
   useEffect(() => {
     if (!open) {
@@ -848,12 +986,13 @@ export function TimePickerField({ value, onChange, helperText, selectedDate }) {
         safeHour === maxHour ? Math.min(Number(parsed.minute), maxMinute) : Number(parsed.minute);
       setDraftHour(`${safeHour}`.padStart(2, "0"));
       setDraftMinute(`${safeMinute}`.padStart(2, "0"));
-      setDraftUnknown(parsed.unknown);
+      setDraftMode(parsed.mode);
+      setDraftShichenKey(parsed.shichenKey || firstAvailableShichenKey);
     }
-  }, [maxHour, maxMinute, open, parsed.hour, parsed.minute, parsed.unknown]);
+  }, [firstAvailableShichenKey, maxHour, maxMinute, open, parsed.hour, parsed.minute, parsed.mode, parsed.shichenKey]);
 
   useEffect(() => {
-    if (!open || draftUnknown) {
+    if (!open || draftMode !== TIME_INPUT_MODE.EXACT) {
       return;
     }
 
@@ -868,7 +1007,19 @@ export function TimePickerField({ value, onChange, helperText, selectedDate }) {
     if (`${safeMinute}`.padStart(2, "0") !== draftMinute) {
       setDraftMinute(`${safeMinute}`.padStart(2, "0"));
     }
-  }, [draftHour, draftMinute, draftUnknown, maxHour, maxMinute, open]);
+  }, [draftHour, draftMinute, draftMode, maxHour, maxMinute, open]);
+
+  useEffect(() => {
+    if (!open || draftMode !== TIME_INPUT_MODE.SHICHEN) {
+      return;
+    }
+
+    const selectedOption = shichenOptions.find((item) => item.key === draftShichenKey);
+
+    if (!selectedOption || selectedOption.disabled) {
+      setDraftShichenKey(firstAvailableShichenKey);
+    }
+  }, [draftMode, draftShichenKey, firstAvailableShichenKey, open, shichenOptions]);
 
   useEffect(() => {
     if (!open || isMobile) {
@@ -902,12 +1053,31 @@ export function TimePickerField({ value, onChange, helperText, selectedDate }) {
       safeHour === maxHour ? Math.min(Number(current.minute), maxMinute) : Number(current.minute);
     setDraftHour(`${safeHour}`.padStart(2, "0"));
     setDraftMinute(`${safeMinute}`.padStart(2, "0"));
-    setDraftUnknown(current.unknown);
+    setDraftMode(current.mode);
+    setDraftShichenKey(current.shichenKey || firstAvailableShichenKey);
     setOpen(true);
   };
 
+  const handleModeChange = (nextMode) => {
+    setDraftMode(nextMode);
+
+    if (nextMode === TIME_INPUT_MODE.SHICHEN) {
+      setDraftShichenKey((current) => {
+        const selectedOption = shichenOptions.find((item) => item.key === current && !item.disabled);
+        return selectedOption ? selectedOption.key : firstAvailableShichenKey;
+      });
+    }
+  };
+
   const confirm = () => {
-    onChange(toTimeValue(draftHour, draftMinute, draftUnknown));
+    onChange(
+      toTimeValue({
+        mode: draftMode,
+        hour: draftHour,
+        minute: draftMinute,
+        shichenKey: draftShichenKey
+      })
+    );
     setOpen(false);
   };
 
@@ -922,29 +1092,46 @@ export function TimePickerField({ value, onChange, helperText, selectedDate }) {
         onClose={() => setOpen(false)}
         onConfirm={confirm}
       >
-        {isMobile ? (
-          <MobileTimeWheel
-            unknown={draftUnknown}
-            hour={draftHour}
-            minute={draftMinute}
-            maxHour={maxHour}
-            maxMinute={maxMinute}
-            onUnknownChange={setDraftUnknown}
-            onHourChange={setDraftHour}
-            onMinuteChange={setDraftMinute}
-          />
-        ) : (
-          <DesktopTimePanel
-            unknown={draftUnknown}
-            hour={draftHour}
-            minute={draftMinute}
-            maxHour={maxHour}
-            maxMinute={maxMinute}
-            onUnknownChange={setDraftUnknown}
-            onHourChange={setDraftHour}
-            onMinuteChange={setDraftMinute}
-          />
-        )}
+        <div className="space-y-4">
+          <TimeModeTabs mode={draftMode} onChange={handleModeChange} />
+
+          {draftMode === TIME_INPUT_MODE.SHICHEN ? (
+            <div className="space-y-3">
+              <p className="px-1 text-sm leading-7 text-mist-300">
+                适合只记得大致时辰的情况。系统会按对应时段生成更贴近传统命理表达的报告。
+              </p>
+              <ShichenOptionGrid
+                options={shichenOptions}
+                selectedKey={draftShichenKey}
+                onSelect={setDraftShichenKey}
+              />
+            </div>
+          ) : null}
+
+          {draftMode === TIME_INPUT_MODE.EXACT ? (
+            isMobile ? (
+              <MobileExactTimeWheel
+                hour={draftHour}
+                minute={draftMinute}
+                maxHour={maxHour}
+                maxMinute={maxMinute}
+                onHourChange={setDraftHour}
+                onMinuteChange={setDraftMinute}
+              />
+            ) : (
+              <DesktopExactTimePanel
+                hour={draftHour}
+                minute={draftMinute}
+                maxHour={maxHour}
+                maxMinute={maxMinute}
+                onHourChange={setDraftHour}
+                onMinuteChange={setDraftMinute}
+              />
+            )
+          ) : null}
+
+          {draftMode === TIME_INPUT_MODE.UNKNOWN ? <UnknownTimeState /> : null}
+        </div>
       </LayerShell>
     </div>
   );

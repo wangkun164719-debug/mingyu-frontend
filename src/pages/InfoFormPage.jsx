@@ -1,6 +1,11 @@
 ﻿import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DatePickerField, TimePickerField, UNKNOWN_TIME } from "../components/BirthPickerField";
+import {
+  DatePickerField,
+  TimePickerField,
+  UNKNOWN_TIME,
+  parseBirthTimeValue
+} from "../components/BirthPickerField";
 import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import IconBadge from "../components/IconBadge";
@@ -62,7 +67,9 @@ function validateForm(form) {
     if (form.birthDate > todayValue) {
       errors.birthDate = "出生日期不能晚于今天";
     } else if (form.birthDate === todayValue && form.birthTime && form.birthTime !== UNKNOWN_TIME) {
-      const [hour, minute] = form.birthTime.split(":").map(Number);
+      const parsedTime = parseBirthTimeValue(form.birthTime);
+      const hour = Number(parsedTime.hour);
+      const minute = Number(parsedTime.minute);
       const candidate = new Date(now);
       candidate.setHours(hour || 0, minute || 0, 0, 0);
 
@@ -191,7 +198,7 @@ export default function InfoFormPage() {
                 value={form.birthTime}
                 onChange={(birthTime) => updateField("birthTime", birthTime)}
                 selectedDate={form.birthDate}
-                helperText="时辰对命理解读至关重要，请尽量准确填写。"
+                helperText="可按传统时辰选择，也可精确到分钟；如果不确定，也可以先选择暂不清楚。"
               />
               <FieldError message={errors.birthTime} />
             </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { UNKNOWN_TIME } from "../components/BirthPickerField";
+import { formatBirthTimeDisplay } from "../components/BirthPickerField";
 import IconBadge from "../components/IconBadge";
 import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
@@ -14,7 +14,7 @@ import {
 } from "../services/reportApi";
 
 function formatBirthMeta(profile) {
-  const timeText = profile.birthTime === UNKNOWN_TIME ? "时辰待补充" : profile.birthTime;
+  const timeText = profile.birthTime ? formatBirthTimeDisplay(profile.birthTime) : "时辰待补充";
   return `出生于 ${profile.birthDate} ${timeText} · ${profile.birthPlace}`;
 }
 
@@ -226,4 +226,3 @@ export default function SimpleResultPage() {
     </div>
   );
 }
-
