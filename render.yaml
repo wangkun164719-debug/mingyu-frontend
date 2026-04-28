@@ -18,7 +18,7 @@ services:
       - key: ANALYTICS_TIMEZONE
         value: Asia/Shanghai
       - key: PUBLIC_SITE_URL
-        value: http://39.101.77.13
+        value: https://mingyuwk.com
       - key: ANALYTICS_API_TOKEN
         sync: false
       - key: MINIMAX_API_KEY
