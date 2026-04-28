@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   getAnalyticsDailySummary,
+  recordAnalyticsEvent,
   recordAnalyticsPageView,
   resolveAnalyticsDateKey,
   TRACKED_PAGES
@@ -30,6 +31,8 @@ const ANALYTICS_TIMEZONE = process.env.ANALYTICS_TIMEZONE || "Asia/Shanghai";
 const ANALYTICS_API_TOKEN = process.env.ANALYTICS_API_TOKEN || "";
 const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || "";
 const ANALYTICS_DATA_FILE = path.join(__dirname, "data", "analytics.json");
+const ANALYTICS_EVENT_LOG_FILE = path.join(__dirname, "data", "analytics-events.jsonl");
+const ANALYTICS_DAILY_SUMMARY_FILE = path.join(projectRoot, "data", "analytics", "daily-summary.json");
 
 const SECTION_ORDER = ["overall", "personality", "career", "wealth", "relationship", "advice"];
 const PREVIEW_ICONS = ["star", "briefcase", "heart"];
@@ -316,10 +319,13 @@ app.post("/api/analytics/page-view", (request, response) => {
   try {
     const summary = recordAnalyticsPageView({
       dataFilePath: ANALYTICS_DATA_FILE,
+      eventLogFilePath: ANALYTICS_EVENT_LOG_FILE,
+      dailySummaryFilePath: ANALYTICS_DAILY_SUMMARY_FILE,
       pageKey: request.body?.pageKey,
       visitorId: request.body?.visitorId,
       occurredAt: new Date(),
-      timeZone: ANALYTICS_TIMEZONE
+      timeZone: ANALYTICS_TIMEZONE,
+      siteUrl: getPublicSiteUrl(request)
     });
 
     return response.status(202).json({
@@ -329,6 +335,29 @@ app.post("/api/analytics/page-view", (request, response) => {
   } catch (error) {
     return response.status(400).json({
       message: error instanceof Error ? error.message : "埋点写入失败。"
+    });
+  }
+});
+
+app.post("/api/analytics/event", (request, response) => {
+  try {
+    const summary = recordAnalyticsEvent({
+      dataFilePath: ANALYTICS_DATA_FILE,
+      eventLogFilePath: ANALYTICS_EVENT_LOG_FILE,
+      dailySummaryFilePath: ANALYTICS_DAILY_SUMMARY_FILE,
+      event: request.body,
+      occurredAt: new Date(),
+      timeZone: ANALYTICS_TIMEZONE,
+      siteUrl: getPublicSiteUrl(request)
+    });
+
+    return response.status(202).json({
+      ok: true,
+      date: summary.date
+    });
+  } catch (error) {
+    return response.status(400).json({
+      message: error instanceof Error ? error.message : "analytics event write failed."
     });
   }
 });

@@ -12,7 +12,7 @@ import {
   peekFullReport,
   saveLatestProfile
 } from "../services/reportApi";
-import { usePageView } from "../services/analytics";
+import { trackEvent, usePageView, useScrollDepth } from "../services/analytics";
 
 function formatBirthMeta(profile) {
   const timeText = profile.birthTime ? formatBirthTimeDisplay(profile.birthTime) : "时辰待补充";
@@ -95,6 +95,7 @@ function ErrorState({ onRetry }) {
           <Link
             to="/result"
             className="rounded-full border border-gold-400/25 bg-white/5 px-6 py-3.5 text-center text-sm font-semibold text-mist-100 transition duration-200 hover:border-gold-300/40 hover:bg-white/10 active:scale-[0.98]"
+            onClick={() => trackEvent("click_retry_measure", { cta_area: "detail_report_error" })}
           >
             返回简版结果
           </Link>
@@ -135,6 +136,7 @@ function InsightGroup({ title, items, accent }) {
 
 export default function DetailReportPage() {
   usePageView("report");
+  useScrollDepth({ 50: "report_scroll_50", 90: "report_scroll_90" });
 
   const { state } = useLocation();
   const profile = useMemo(
@@ -223,6 +225,7 @@ export default function DetailReportPage() {
         <Link
           to="/measure"
           className="inline-flex items-center gap-2 text-sm font-semibold text-gold-300 transition duration-200 hover:text-gold-200"
+          onClick={() => trackEvent("click_retry_measure", { cta_area: "detail_report_top" })}
         >
           <BackIcon className="h-4 w-4" />
           重新测算
@@ -401,6 +404,7 @@ export default function DetailReportPage() {
               <Link
                 to="/measure"
                 className="rounded-full border border-gold-400/25 bg-white/5 px-6 py-3.5 text-sm font-semibold text-mist-100 transition duration-200 hover:border-gold-300/40 hover:bg-white/10 active:scale-[0.98]"
+                onClick={() => trackEvent("click_retry_measure", { cta_area: "detail_report_bottom" })}
               >
                 重新测算
               </Link>

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BrandMark, MoonIcon, SparkIcon } from "./Icons";
+import { MoonIcon, SparkIcon } from "./Icons";
 
 export default function Footer() {
   return (
@@ -7,8 +7,11 @@ export default function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-white">
-            <BrandMark className="h-5 w-5 text-gold-400" />
-            <span className="font-display text-2xl tracking-[0.2em]">命语</span>
+            <img
+              src="/brand/mingyu-logo.png"
+              alt="命语"
+              className="h-12 w-auto rounded-xl bg-white object-contain p-1"
+            />
           </div>
           <p className="max-w-xs text-sm leading-7 text-mist-300">
             以东方命理为灵感，提供温和、克制、细腻的命理解读体验，陪你看见当下阶段真正关心的方向。

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { navigationLinks } from "../data/site";
-import { BrandMark, SparkIcon } from "./Icons";
+import { trackEvent } from "../services/analytics";
+import { SparkIcon } from "./Icons";
 
 function navClass({ isActive }) {
   return [
@@ -12,18 +13,31 @@ function navClass({ isActive }) {
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const trackNavClick = (to) => {
+    if (to === "/about") {
+      trackEvent("click_about", { nav_area: "header" });
+    }
+
+    if (to === "/faq") {
+      trackEvent("click_faq", { nav_area: "header" });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-gold-500/10 bg-ink-950/75 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 text-xl font-semibold text-white">
-          <BrandMark className="h-5 w-5 text-gold-400" />
+          <img
+            src="/brand/mingyu-icon.png"
+            alt="命语"
+            className="h-9 w-9 rounded-full bg-white object-contain"
+          />
           <span className="font-display tracking-[0.2em] text-white">命语</span>
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm lg:flex">
           {navigationLinks.map((item) => (
-            <NavLink key={item.to} to={item.to} className={navClass}>
+            <NavLink key={item.to} to={item.to} className={navClass} onClick={() => trackNavClick(item.to)}>
               {item.label}
             </NavLink>
           ))}
@@ -33,6 +47,7 @@ export default function Header() {
           <Link
             to="/measure"
             className="inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+            onClick={() => trackEvent("click_start_measure", { nav_area: "header" })}
           >
             立即测算
             <SparkIcon className="h-4 w-4" />
@@ -61,7 +76,10 @@ export default function Header() {
                 key={item.to}
                 to={item.to}
                 className={navClass}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  trackNavClick(item.to);
+                  setOpen(false);
+                }}
               >
                 {item.label}
               </NavLink>
@@ -69,7 +87,10 @@ export default function Header() {
             <Link
               to="/measure"
               className="mt-2 inline-flex items-center justify-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                trackEvent("click_start_measure", { nav_area: "mobile_header" });
+                setOpen(false);
+              }}
             >
               立即测算
               <SparkIcon className="h-4 w-4" />

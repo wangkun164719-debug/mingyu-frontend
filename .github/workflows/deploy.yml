@@ -41,10 +41,13 @@ jobs:
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.4
+        env:
+          VITE_BAIDU_TONGJI_ID: ${{ vars.VITE_BAIDU_TONGJI_ID }}
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_USER }}
           key: ${{ secrets.ALIYUN_SSH_KEY }}
+          envs: VITE_BAIDU_TONGJI_ID
           script_stop: true
           command_timeout: 20m
           script: |
@@ -98,9 +101,19 @@ jobs:
             echo "==> Setting public site URL"
             touch "$APP_DIR/server/.env"
             if grep -q '^PUBLIC_SITE_URL=' "$APP_DIR/server/.env"; then
-              sed -i 's|^PUBLIC_SITE_URL=.*|PUBLIC_SITE_URL=https://mingyuwk.com|' "$APP_DIR/server/.env"
+              sed -i 's|^PUBLIC_SITE_URL=.*|PUBLIC_SITE_URL=https://www.mingyuwk.com|' "$APP_DIR/server/.env"
             else
-              printf '\nPUBLIC_SITE_URL=https://mingyuwk.com\n' >> "$APP_DIR/server/.env"
+              printf '\nPUBLIC_SITE_URL=https://www.mingyuwk.com\n' >> "$APP_DIR/server/.env"
+            fi
+
+            echo "==> Setting frontend analytics env"
+            touch "$APP_DIR/.env"
+            if [ -n "${VITE_BAIDU_TONGJI_ID:-}" ]; then
+              if grep -q '^VITE_BAIDU_TONGJI_ID=' "$APP_DIR/.env"; then
+                sed -i "s|^VITE_BAIDU_TONGJI_ID=.*|VITE_BAIDU_TONGJI_ID=${VITE_BAIDU_TONGJI_ID}|" "$APP_DIR/.env"
+              else
+                printf '\nVITE_BAIDU_TONGJI_ID=%s\n' "$VITE_BAIDU_TONGJI_ID" >> "$APP_DIR/.env"
+              fi
             fi
 
             echo "==> Installing dependencies"

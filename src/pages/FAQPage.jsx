@@ -4,15 +4,21 @@ import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import { SparkIcon } from "../components/Icons";
 import { faqs } from "../data/site";
+import { trackEvent, usePageView } from "../services/analytics";
 
 export default function FAQPage() {
+  usePageView("faq");
+
   return (
     <div className="pb-6">
       <PageIntro title="常见问题" subtitle="关于命理解读，您可能想知道的一切" />
 
       <PageSection className="pt-12">
         <div className="mx-auto max-w-3xl">
-          <FAQAccordion items={faqs} />
+          <FAQAccordion
+            items={faqs}
+            onExpand={(_item, index) => trackEvent("faq_expand_item", { faq_index: index + 1 })}
+          />
         </div>
       </PageSection>
 
@@ -34,6 +40,7 @@ export default function FAQPage() {
         <Link
           to="/measure"
           className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+          onClick={() => trackEvent("click_faq_start_measure", { cta_area: "faq_bottom" })}
         >
           立即测算
           <SparkIcon className="h-4 w-4" />

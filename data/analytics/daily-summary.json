@@ -1,0 +1,57 @@
+{
+  "date": "YYYY-MM-DD",
+  "timeZone": "Asia/Shanghai",
+  "siteUrl": "https://www.mingyuwk.com",
+  "site": {
+    "pv": 0,
+    "uv": 0,
+    "top_sources": [
+      {
+        "source": "xiaohongshu",
+        "uv": 0,
+        "pv": 0
+      }
+    ],
+    "top_landing_pages": [
+      {
+        "path": "/",
+        "pv": 0
+      }
+    ]
+  },
+  "funnel": {
+    "home_view": 0,
+    "click_start_measure": 0,
+    "measure_page_view": 0,
+    "measure_form_start": 0,
+    "measure_submit_click": 0,
+    "measure_submit_success": 0,
+    "report_page_view": 0,
+    "click_detail_report": 0,
+    "pay_button_click": 0,
+    "pay_success": 0
+  },
+  "conversion_rates": {
+    "home_to_measure_click_rate": 0,
+    "measure_page_to_form_start_rate": 0,
+    "form_start_to_submit_success_rate": 0,
+    "report_to_detail_click_rate": 0,
+    "pay_success_rate": 0
+  },
+  "content_sources": [
+    {
+      "utm_source": "xiaohongshu",
+      "utm_campaign": "day1_career",
+      "landing_page": "/measure",
+      "uv": 0,
+      "measure_submit_success": 0,
+      "click_detail_report": 0
+    }
+  ],
+  "issues": [
+    {
+      "type": "dropoff",
+      "description": "测算页访问较多，但表单开始率较低"
+    }
+  ]
+}

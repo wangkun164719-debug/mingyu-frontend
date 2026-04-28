@@ -1,11 +1,14 @@
 import { useEffect } from "react";
 import { SparkIcon } from "./Icons";
+import { trackPayEvent } from "../services/analytics";
 
 export default function PaymentModal({ open, onClose, onConfirm }) {
   useEffect(() => {
     if (!open) {
       return undefined;
     }
+
+    trackPayEvent("pay_page_view", { pay_mode: "free_trial" });
 
     const onKeyDown = (event) => {
       if (event.key === "Escape") {

@@ -12,10 +12,11 @@ import {
   steps,
   testimonials
 } from "../data/site";
-import { usePageView } from "../services/analytics";
+import { trackEvent, usePageView, useScrollDepth } from "../services/analytics";
 
 export default function HomePage() {
   usePageView("home");
+  useScrollDepth({ 50: "home_scroll_50", 90: "home_scroll_90" });
 
   return (
     <div className="pb-4">
@@ -38,6 +39,7 @@ export default function HomePage() {
             <Link
               to="/measure"
               className="inline-flex items-center justify-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+              onClick={() => trackEvent("click_start_measure", { cta_area: "home_hero" })}
             >
               开始测算
               <SparkIcon className="h-4 w-4" />
@@ -45,6 +47,7 @@ export default function HomePage() {
             <Link
               to="/about"
               className="inline-flex items-center justify-center rounded-full border border-gold-400/25 bg-white/5 px-6 py-3.5 text-sm font-semibold text-mist-100 transition duration-200 hover:-translate-y-0.5 hover:border-gold-300/40 hover:bg-white/10 active:scale-[0.98]"
+              onClick={() => trackEvent("click_about", { cta_area: "home_hero" })}
             >
               了解命语
             </Link>
@@ -132,7 +135,10 @@ export default function HomePage() {
       <PageSection className="pt-20">
         <SectionTitle icon={false} title="常见问题" />
         <div className="mx-auto mt-10 max-w-3xl">
-          <FAQAccordion items={faqs.slice(0, 2)} />
+          <FAQAccordion
+            items={faqs.slice(0, 2)}
+            onExpand={(_item, index) => trackEvent("click_faq", { faq_index: index + 1, cta_area: "home_faq" })}
+          />
         </div>
       </PageSection>
 
@@ -157,6 +163,7 @@ export default function HomePage() {
           <Link
             to="/measure"
             className="mt-8 inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+            onClick={() => trackEvent("click_start_measure", { cta_area: "home_bottom" })}
           >
             立即开始
             <SparkIcon className="h-4 w-4" />

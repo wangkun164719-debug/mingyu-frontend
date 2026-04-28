@@ -12,6 +12,7 @@ import {
   peekPreviewReport,
   saveLatestProfile
 } from "../services/reportApi";
+import { trackEvent, trackPayEvent, usePageView, useScrollDepth } from "../services/analytics";
 
 function formatBirthMeta(profile) {
   const timeText = profile.birthTime ? formatBirthTimeDisplay(profile.birthTime) : "时辰待补充";
@@ -68,6 +69,7 @@ function ErrorState({ onRetry }) {
         <Link
           to="/measure"
           className="rounded-full border border-gold-400/25 bg-white/5 px-6 py-3.5 text-center text-sm font-semibold text-mist-100 transition duration-200 hover:border-gold-300/40 hover:bg-white/10 active:scale-[0.98]"
+          onClick={() => trackEvent("click_retry_measure", { cta_area: "simple_report_error" })}
         >
           返回填写页
         </Link>
@@ -77,6 +79,9 @@ function ErrorState({ onRetry }) {
 }
 
 export default function SimpleResultPage() {
+  usePageView("report");
+  useScrollDepth({ 50: "report_scroll_50", 90: "report_scroll_90" });
+
   const navigate = useNavigate();
   const { state } = useLocation();
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -196,13 +201,18 @@ export default function SimpleResultPage() {
               <button
                 type="button"
                 className="rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
-                onClick={() => setPaymentOpen(true)}
+                onClick={() => {
+                  trackEvent("click_detail_report", { cta_area: "simple_report" });
+                  trackPayEvent("pay_button_click", { cta_area: "simple_report" });
+                  setPaymentOpen(true);
+                }}
               >
                 查看详细报告
               </button>
               <Link
                 to="/measure"
                 className="rounded-full border border-gold-400/25 bg-white/5 px-6 py-3.5 text-center text-sm font-semibold text-mist-100 transition duration-200 hover:border-gold-300/40 hover:bg-white/10 active:scale-[0.98]"
+                onClick={() => trackEvent("click_retry_measure", { cta_area: "simple_report" })}
               >
                 重新填写
               </Link>
@@ -213,15 +223,19 @@ export default function SimpleResultPage() {
 
       <PaymentModal
         open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        onConfirm={() =>
+        onClose={() => {
+          trackPayEvent("pay_cancel", { pay_mode: "free_trial" });
+          setPaymentOpen(false);
+        }}
+        onConfirm={() => {
+          trackPayEvent("pay_success", { pay_mode: "free_trial" });
           navigate("/report", {
             state: {
               profile,
               preview
             }
-          })
-        }
+          });
+        }}
       />
     </div>
   );

@@ -18,7 +18,9 @@ services:
       - key: ANALYTICS_TIMEZONE
         value: Asia/Shanghai
       - key: PUBLIC_SITE_URL
-        value: https://mingyuwk.com
+        value: https://www.mingyuwk.com
+      - key: VITE_BAIDU_TONGJI_ID
+        value: 904e016c0ae35c58897ed409de422d76
       - key: ANALYTICS_API_TOKEN
         sync: false
       - key: MINIMAX_API_KEY

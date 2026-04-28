@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronIcon } from "./Icons";
 
-export default function FAQAccordion({ items, initialOpen = 0 }) {
+export default function FAQAccordion({ items, initialOpen = 0, onExpand }) {
   const [openIndex, setOpenIndex] = useState(initialOpen);
 
   return (
@@ -17,7 +17,14 @@ export default function FAQAccordion({ items, initialOpen = 0 }) {
             <button
               type="button"
               className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
-              onClick={() => setOpenIndex(isOpen ? -1 : index)}
+              onClick={() => {
+                const nextIndex = isOpen ? -1 : index;
+                setOpenIndex(nextIndex);
+
+                if (nextIndex !== -1) {
+                  onExpand?.(item, index);
+                }
+              }}
             >
               <span className="text-base font-semibold text-white sm:text-lg">{item.question}</span>
               <ChevronIcon

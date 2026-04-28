@@ -1,9 +1,11 @@
 import { Outlet, useLocation } from "react-router-dom";
 import Footer from "./Footer";
 import Header from "./Header";
+import { useBaiduTongji } from "../services/analytics";
 
 export default function Layout() {
   const location = useLocation();
+  useBaiduTongji();
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-aurora text-mist-100">

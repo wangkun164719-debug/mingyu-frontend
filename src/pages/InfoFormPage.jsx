@@ -10,7 +10,7 @@ import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import IconBadge from "../components/IconBadge";
 import { preferenceOptions } from "../data/site";
-import { usePageView } from "../services/analytics";
+import { trackEvent, usePageView } from "../services/analytics";
 import { saveLatestProfile } from "../services/reportApi";
 
 const initialForm = {
@@ -97,8 +97,38 @@ export default function InfoFormPage() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const fieldRefs = useRef({});
+  const formStartedRef = useRef(false);
+
+  const trackFormStart = (formStep) => {
+    if (formStartedRef.current) {
+      return;
+    }
+
+    formStartedRef.current = true;
+    trackEvent("measure_form_start", { form_step: formStep });
+  };
 
   const updateField = (key, value) => {
+    trackFormStart(key);
+
+    if (key === "gender" && value) {
+      trackEvent("measure_gender_selected", { form_step: "gender" });
+    }
+
+    if (key === "birthDate" && value) {
+      trackEvent("measure_birth_date_filled", {
+        form_step: "birthDate",
+        has_birth_date: true
+      });
+    }
+
+    if (key === "birthTime" && value) {
+      trackEvent("measure_birth_time_filled", {
+        form_step: "birthTime",
+        has_birth_time: true
+      });
+    }
+
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => {
       if (!current[key]) {
@@ -112,8 +142,16 @@ export default function InfoFormPage() {
   };
 
   const togglePreference = (preference) => {
+    trackFormStart("preferences");
     setForm((current) => {
       const exists = current.preferences.includes(preference);
+
+      if (!exists) {
+        trackEvent("measure_focus_selected", {
+          form_step: "preferences",
+          focus_type: preference
+        });
+      }
 
       return {
         ...current,
@@ -126,11 +164,23 @@ export default function InfoFormPage() {
 
   const onSubmit = (event) => {
     event.preventDefault();
+    trackEvent("measure_submit_click", {
+      form_step: "submit",
+      has_birth_date: Boolean(form.birthDate),
+      has_birth_time: Boolean(form.birthTime)
+    });
+
     const nextErrors = validateForm(form);
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       const firstErrorKey = Object.keys(nextErrors)[0];
+      trackEvent("measure_submit_error", {
+        form_step: firstErrorKey,
+        error_type: firstErrorKey,
+        has_birth_date: Boolean(form.birthDate),
+        has_birth_time: Boolean(form.birthTime)
+      });
       fieldRefs.current[firstErrorKey]?.scrollIntoView({
         behavior: "smooth",
         block: "center"
@@ -138,6 +188,12 @@ export default function InfoFormPage() {
       return;
     }
 
+    trackEvent("measure_submit_success", {
+      form_step: "submit",
+      focus_count: form.preferences.length,
+      has_birth_date: true,
+      has_birth_time: Boolean(form.birthTime)
+    });
     saveLatestProfile(form);
     navigate("/result", { state: { profile: form } });
   };

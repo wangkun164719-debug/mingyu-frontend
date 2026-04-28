@@ -4,8 +4,11 @@ import PageIntro from "../components/PageIntro";
 import PageSection from "../components/PageSection";
 import { SparkIcon } from "../components/Icons";
 import { aboutValues, promises } from "../data/site";
+import { trackEvent, usePageView } from "../services/analytics";
 
 export default function AboutPage() {
+  usePageView("about");
+
   return (
     <div className="pb-6">
       <PageIntro title="关于命语" subtitle="传承东方智慧，解读生命密码" />
@@ -56,6 +59,7 @@ export default function AboutPage() {
           <Link
             to="/measure"
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+            onClick={() => trackEvent("click_about_start_measure", { cta_area: "about_bottom" })}
           >
             开始测算
             <SparkIcon className="h-4 w-4" />
