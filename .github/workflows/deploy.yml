@@ -95,6 +95,14 @@ jobs:
               cp -r "$DATA_BAK" "$APP_DIR/server/data"
             fi
 
+            echo "==> Setting public site URL"
+            touch "$APP_DIR/server/.env"
+            if grep -q '^PUBLIC_SITE_URL=' "$APP_DIR/server/.env"; then
+              sed -i 's|^PUBLIC_SITE_URL=.*|PUBLIC_SITE_URL=https://mingyuwk.com|' "$APP_DIR/server/.env"
+            else
+              printf '\nPUBLIC_SITE_URL=https://mingyuwk.com\n' >> "$APP_DIR/server/.env"
+            fi
+
             echo "==> Installing dependencies"
             cd "$APP_DIR"
             npm ci
