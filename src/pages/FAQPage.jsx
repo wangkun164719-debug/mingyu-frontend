@@ -30,7 +30,7 @@ export default function FAQPage() {
           </p>
           <div className="mt-6 flex flex-col gap-3 text-sm text-mist-200 sm:flex-row sm:justify-center sm:gap-6">
             <span>客服时间：每日 9:00 - 21:00</span>
-            <span>邮箱：contact@mingyu.com</span>
+            <span>邮箱：mingyuwk164@163.com</span>
           </div>
         </div>
       </PageSection>

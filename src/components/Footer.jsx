@@ -43,7 +43,7 @@ export default function Footer() {
           </div>
           <div className="space-y-2 text-sm leading-7 text-mist-300">
             <p>客服时间：每日 9:00 - 21:00</p>
-            <p>邮箱：wk164719@163.com</p>
+            <p>邮箱：mingyuwk164@163.com</p>
           </div>
         </div>
       </div>
