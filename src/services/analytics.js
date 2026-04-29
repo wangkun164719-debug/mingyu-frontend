@@ -379,7 +379,12 @@ export function initBaiduTongji() {
     return;
   }
 
-  if (document.querySelector(`script[data-baidu-tongji="${tongjiId}"]`)) {
+  const encodedTongjiId = encodeURIComponent(tongjiId);
+  const existingTongjiScript = document.querySelector(
+    `script[data-baidu-tongji="${tongjiId}"], script[src="https://hm.baidu.com/hm.js?${encodedTongjiId}"]`
+  );
+
+  if (existingTongjiScript) {
     return;
   }
 
@@ -387,7 +392,7 @@ export function initBaiduTongji() {
   const script = document.createElement("script");
   script.async = true;
   script.dataset.baiduTongji = tongjiId;
-  script.src = `https://hm.baidu.com/hm.js?${encodeURIComponent(tongjiId)}`;
+  script.src = `https://hm.baidu.com/hm.js?${encodedTongjiId}`;
 
   const firstScript = document.getElementsByTagName("script")[0];
   firstScript?.parentNode?.insertBefore(script, firstScript);
