@@ -160,10 +160,21 @@ jobs:
             pm2 save
 
             echo "==> Running local health check"
-            curl -fsS http://127.0.0.1:8787/api/health | tee /tmp/mingyu-health.json
+            : > /tmp/mingyu-health.json
+            for attempt in $(seq 1 10); do
+              if curl -fsS http://127.0.0.1:8787/api/health > /tmp/mingyu-health.json; then
+                break
+              fi
+
+              echo "Health check attempt $attempt failed; waiting for server startup..."
+              sleep 2
+            done
+
+            cat /tmp/mingyu-health.json || true
             if ! grep -q '"about"' /tmp/mingyu-health.json; then
               echo "ERROR: local health check is still returning the legacy analytics page list."
               ss -ltnp 2>/dev/null | grep ':8787' || true
+              pm2 logs mingyu --nostream --lines 80 || true
               exit 1
             fi
 
