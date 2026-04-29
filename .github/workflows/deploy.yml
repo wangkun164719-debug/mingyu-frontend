@@ -132,6 +132,17 @@ jobs:
             ss -ltnp 2>/dev/null | grep ':8787' || true
             echo "==> Inspecting node processes"
             ps -ef | grep -E 'node|server/index|8787' | grep -v grep || true
+            LEGACY_NODE_PIDS="$(ps -eo pid=,args= | awk '/node server\/index\.js/ && !/awk/ { print $1 }' || true)"
+            if [ -n "$LEGACY_NODE_PIDS" ]; then
+              echo "==> Stopping legacy node server processes: $LEGACY_NODE_PIDS"
+              kill $LEGACY_NODE_PIDS 2>/dev/null || true
+              sleep 1
+              STILL_RUNNING_PIDS="$(ps -eo pid=,args= | awk '/node server\/index\.js/ && !/awk/ { print $1 }' || true)"
+              if [ -n "$STILL_RUNNING_PIDS" ]; then
+                echo "==> Retrying legacy process stop with sudo: $STILL_RUNNING_PIDS"
+                sudo -n kill -9 $STILL_RUNNING_PIDS
+              fi
+            fi
             if command -v lsof >/dev/null 2>&1; then
               lsof -ti tcp:8787 | xargs -r kill -9 || true
             fi
@@ -141,14 +152,19 @@ jobs:
             sleep 1
             ss -ltnp 2>/dev/null | grep ':8787' || true
             ps -ef | grep -E 'node|server/index|8787' | grep -v grep || true
+            if ss -ltnp 2>/dev/null | grep -q ':8787'; then
+              echo "ERROR: port 8787 is still occupied before starting the new analytics server."
+              exit 1
+            fi
             pm2 start server/index.js --name mingyu --cwd "$APP_DIR" --update-env
             pm2 save
 
             echo "==> Running local health check"
             curl -fsS http://127.0.0.1:8787/api/health | tee /tmp/mingyu-health.json
             if ! grep -q '"about"' /tmp/mingyu-health.json; then
-              echo "WARN: local health check is still returning the legacy analytics page list."
+              echo "ERROR: local health check is still returning the legacy analytics page list."
               ss -ltnp 2>/dev/null | grep ':8787' || true
+              exit 1
             fi
 
             echo "==> Deployment completed"
