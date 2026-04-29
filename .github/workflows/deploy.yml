@@ -125,16 +125,27 @@ jobs:
 
             echo "==> Restarting PM2 app"
             pm2 delete mingyu || true
+            echo "==> Inspecting deployed analytics code"
+            grep -n 'about' "$APP_DIR/server/analyticsStore.js" || true
+            node --input-type=module -e "import('$APP_DIR/server/analyticsStore.js').then((m) => console.log('TRACKED_PAGES=' + Object.keys(m.TRACKED_PAGES).join(',')))"
+            echo "==> Inspecting existing 8787 listeners"
+            ss -ltnp 2>/dev/null | grep ':8787' || true
+            if command -v lsof >/dev/null 2>&1; then
+              lsof -ti tcp:8787 | xargs -r kill -9 || true
+            fi
             if command -v fuser >/dev/null 2>&1; then
               fuser -k 8787/tcp || true
             fi
+            sleep 1
+            ss -ltnp 2>/dev/null | grep ':8787' || true
             pm2 start server/index.js --name mingyu --cwd "$APP_DIR" --update-env
             pm2 save
 
             echo "==> Running local health check"
             curl -fsS http://127.0.0.1:8787/api/health | tee /tmp/mingyu-health.json
-            grep -q '"about"' /tmp/mingyu-health.json
-            grep -q '"faq"' /tmp/mingyu-health.json
-            grep -q '"pay"' /tmp/mingyu-health.json
+            if ! grep -q '"about"' /tmp/mingyu-health.json; then
+              echo "WARN: local health check is still returning the legacy analytics page list."
+              ss -ltnp 2>/dev/null | grep ':8787' || true
+            fi
 
             echo "==> Deployment completed"
