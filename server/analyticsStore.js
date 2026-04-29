@@ -296,6 +296,59 @@ function buildIssues({ funnel, conversionRates }) {
   return issues;
 }
 
+function buildPageSummary(pageKey, dayRecord) {
+  const page = TRACKED_PAGES[pageKey];
+  const legacyRecord = dayRecord.pages?.[pageKey] || {};
+  const visitors = legacyRecord?.visitors && typeof legacyRecord.visitors === "object"
+    ? Object.keys(legacyRecord.visitors)
+    : [];
+
+  return {
+    pageKey,
+    label: page.label,
+    path: page.path,
+    pv: Number(legacyRecord?.pv || 0),
+    uv: visitors.length
+  };
+}
+
+function getLegacyPageSummaries(dayRecord) {
+  return Object.keys(TRACKED_PAGES)
+    .filter((pageKey) => ["home", "measure", "report"].includes(pageKey))
+    .map((pageKey) => buildPageSummary(pageKey, dayRecord));
+}
+
+function getLegacyVisitors(dayRecord) {
+  const visitors = new Set();
+
+  Object.values(dayRecord.pages || {}).forEach((pageRecord) => {
+    Object.keys(pageRecord?.visitors || {}).forEach((visitorId) => visitors.add(visitorId));
+  });
+
+  return visitors;
+}
+
+function buildSummaryText(summary) {
+  if (summary.site.pv === 0) {
+    return [
+      `${summary.date} 网站运营日报`,
+      "当日暂无官网访问数据。"
+    ].join("\n");
+  }
+
+  const home = summary.pages.find((page) => page.pageKey === "home");
+  const measure = summary.pages.find((page) => page.pageKey === "measure");
+  const report = summary.pages.find((page) => page.pageKey === "report");
+
+  return [
+    `${summary.date} 网站运营日报`,
+    `全站 PV ${summary.site.pv}，UV ${summary.site.uv}`,
+    `首页：PV ${home?.pv || 0}，UV ${home?.uv || 0}`,
+    `测算页：PV ${measure?.pv || 0}，UV ${measure?.uv || 0}`,
+    `详细报告页：PV ${report?.pv || 0}，UV ${report?.uv || 0}`
+  ].join("\n");
+}
+
 export function getAnalyticsDailySummary({
   dataFilePath,
   dateKey,
@@ -304,9 +357,34 @@ export function getAnalyticsDailySummary({
 }) {
   const store = readStore(dataFilePath);
   const dayRecord = store.dates[dateKey] || ensureDayRecord({ dates: {} }, dateKey);
-  const funnel = toCountMap(dayRecord.events);
-  const totalPv = Number(dayRecord.viewEvents || 0);
-  const totalUv = Object.keys(dayRecord.viewVisitors || {}).length;
+  const legacyPages = getLegacyPageSummaries(dayRecord);
+  const legacyHome = legacyPages.find((page) => page.pageKey === "home") || { pv: 0, uv: 0 };
+  const legacyMeasure = legacyPages.find((page) => page.pageKey === "measure") || { pv: 0, uv: 0 };
+  const legacyReport = legacyPages.find((page) => page.pageKey === "report") || { pv: 0, uv: 0 };
+  const legacyVisitors = getLegacyVisitors(dayRecord);
+  const rawFunnel = toCountMap(dayRecord.events);
+  const funnel = {
+    ...rawFunnel,
+    home_view: rawFunnel.home_view || legacyHome.pv,
+    measure_page_view: rawFunnel.measure_page_view || legacyMeasure.pv,
+    report_page_view: rawFunnel.report_page_view || legacyReport.pv
+  };
+  const totalPv = Number(dayRecord.viewEvents || 0) || legacyPages.reduce((total, page) => total + page.pv, 0);
+  const totalUv = Object.keys(dayRecord.viewVisitors || {}).length || legacyVisitors.size;
+  const landingPages = Object.keys(dayRecord.landingPages || {}).length
+    ? dayRecord.landingPages
+    : legacyPages.reduce((pages, page) => {
+        if (page.pv > 0) {
+          pages[page.path] = { pv: page.pv, visitors: {} };
+        }
+
+        return pages;
+      }, {});
+  const sources = Object.keys(dayRecord.sources || {}).length
+    ? dayRecord.sources
+    : totalPv > 0
+      ? { direct: { pv: totalPv, visitors: Object.fromEntries([...legacyVisitors].map((visitorId) => [visitorId, {}])) } }
+      : {};
 
   const conversionRates = {
     home_to_measure_click_rate: formatRate(funnel.click_start_measure, funnel.home_view),
@@ -323,12 +401,12 @@ export function getAnalyticsDailySummary({
     site: {
       pv: totalPv,
       uv: totalUv,
-      top_sources: topBuckets(dayRecord.sources, (source, bucket) => ({
+      top_sources: topBuckets(sources, (source, bucket) => ({
         source,
         uv: Object.keys(bucket.visitors || {}).length,
         pv: Number(bucket.pv || 0)
       })),
-      top_landing_pages: topBuckets(dayRecord.landingPages, (pathKey, bucket) => ({
+      top_landing_pages: topBuckets(landingPages, (pathKey, bucket) => ({
         path: pathKey,
         pv: Number(bucket.pv || 0)
       }))
@@ -345,11 +423,34 @@ export function getAnalyticsDailySummary({
         click_detail_report: Number(bucket.click_detail_report || 0)
       }))
       .sort((a, b) => b.uv - a.uv)
-      .slice(0, 20)
+      .slice(0, 20),
+    totals: {
+      pv: totalPv,
+      uv: totalUv
+    },
+    pages: legacyPages.map((page) => ({
+      ...page,
+      pv: page.pv || (page.pageKey === "home" ? funnel.home_view : page.pageKey === "measure" ? funnel.measure_page_view : page.pageKey === "report" ? funnel.report_page_view : 0)
+    })),
+    conversions: {
+      homeToMeasure: {
+        pvRate: formatRate(legacyMeasure.pv || funnel.measure_page_view, legacyHome.pv || funnel.home_view),
+        uvRate: formatRate(legacyMeasure.uv, legacyHome.uv)
+      },
+      measureToReport: {
+        pvRate: formatRate(legacyReport.pv || funnel.report_page_view, legacyMeasure.pv || funnel.measure_page_view),
+        uvRate: formatRate(legacyReport.uv, legacyMeasure.uv)
+      },
+      homeToReport: {
+        pvRate: formatRate(legacyReport.pv || funnel.report_page_view, legacyHome.pv || funnel.home_view),
+        uvRate: formatRate(legacyReport.uv, legacyHome.uv)
+      }
+    }
   };
 
   return {
     ...summary,
+    summaryText: buildSummaryText(summary),
     issues: buildIssues({
       funnel,
       conversionRates

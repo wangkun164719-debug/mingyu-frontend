@@ -124,7 +124,8 @@ jobs:
             npm run build
 
             echo "==> Restarting PM2 app"
-            pm2 restart mingyu --update-env
+            pm2 delete mingyu || true
+            pm2 start server/index.js --name mingyu --cwd "$APP_DIR" --update-env
             pm2 save
 
             echo "==> Running local health check"

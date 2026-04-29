@@ -25,10 +25,10 @@ Follow this order:
 ## Data Source
 
 Default site:
-`http://39.101.77.13`
+`https://www.mingyuwk.com`
 
 Default analytics endpoint:
-`http://39.101.77.13/api/analytics/daily-summary?date=yesterday`
+`https://www.mingyuwk.com/api/analytics/daily-summary?date=yesterday`
 
 Send the analytics token with header:
 `x-analytics-token: <token>`
