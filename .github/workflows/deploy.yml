@@ -130,6 +130,8 @@ jobs:
             node --input-type=module -e "import('$APP_DIR/server/analyticsStore.js').then((m) => console.log('TRACKED_PAGES=' + Object.keys(m.TRACKED_PAGES).join(',')))"
             echo "==> Inspecting existing 8787 listeners"
             ss -ltnp 2>/dev/null | grep ':8787' || true
+            echo "==> Inspecting node processes"
+            ps -ef | grep -E 'node|server/index|8787' | grep -v grep || true
             if command -v lsof >/dev/null 2>&1; then
               lsof -ti tcp:8787 | xargs -r kill -9 || true
             fi
@@ -138,6 +140,7 @@ jobs:
             fi
             sleep 1
             ss -ltnp 2>/dev/null | grep ':8787' || true
+            ps -ef | grep -E 'node|server/index|8787' | grep -v grep || true
             pm2 start server/index.js --name mingyu --cwd "$APP_DIR" --update-env
             pm2 save
 
