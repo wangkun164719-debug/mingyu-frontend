@@ -125,10 +125,16 @@ jobs:
 
             echo "==> Restarting PM2 app"
             pm2 delete mingyu || true
+            if command -v fuser >/dev/null 2>&1; then
+              fuser -k 8787/tcp || true
+            fi
             pm2 start server/index.js --name mingyu --cwd "$APP_DIR" --update-env
             pm2 save
 
             echo "==> Running local health check"
-            curl -f http://127.0.0.1:8787/api/health
+            curl -fsS http://127.0.0.1:8787/api/health | tee /tmp/mingyu-health.json
+            grep -q '"about"' /tmp/mingyu-health.json
+            grep -q '"faq"' /tmp/mingyu-health.json
+            grep -q '"pay"' /tmp/mingyu-health.json
 
             echo "==> Deployment completed"
