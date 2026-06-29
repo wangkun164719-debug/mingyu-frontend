@@ -23,10 +23,10 @@ const distDir = path.join(projectRoot, "dist");
 const app = express();
 
 const PORT = Number(process.env.PORT || 8787);
-const REPORT_PROVIDER = process.env.REPORT_PROVIDER || "minimax";
-const MINIMAX_MODEL = process.env.MINIMAX_MODEL || "MiniMax-M2.7";
-const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || "";
-const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || "https://api.minimaxi.com/v1";
+const REPORT_PROVIDER = process.env.REPORT_PROVIDER || "deepseek";
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
 const ANALYTICS_TIMEZONE = process.env.ANALYTICS_TIMEZONE || "Asia/Shanghai";
 const ANALYTICS_API_TOKEN = process.env.ANALYTICS_API_TOKEN || "";
 const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || "";
@@ -196,21 +196,24 @@ function fullPrompt(profile) {
   ].join("\n");
 }
 
-async function callMiniMax(prompt, maxTokens) {
-  if (!MINIMAX_API_KEY) {
-    throw new Error("MiniMax API Key 未配置。");
+async function callDeepSeek(prompt, maxTokens) {
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error("DeepSeek API Key 未配置。");
   }
 
-  const response = await fetch(`${MINIMAX_BASE_URL}/chat/completions`, {
+  const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${MINIMAX_API_KEY}`,
+      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: MINIMAX_MODEL,
+      model: DEEPSEEK_MODEL,
       temperature: 0.7,
       max_tokens: maxTokens,
+      thinking: { type: "disabled" },
+      response_format: { type: "json_object" },
+      stream: false,
       messages: [
         {
           role: "system",
@@ -227,14 +230,14 @@ async function callMiniMax(prompt, maxTokens) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`MiniMax 调用失败：${response.status} ${errorText}`);
+    throw new Error(`DeepSeek 调用失败：${response.status} ${errorText}`);
   }
 
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
 
   if (!content) {
-    throw new Error("MiniMax 未返回有效内容。");
+    throw new Error("DeepSeek 未返回有效内容。");
   }
 
   return extractJsonObject(content);
@@ -294,12 +297,12 @@ function normalizeFullReport(report, profile) {
 }
 
 async function generatePreview(profile) {
-  const raw = await callMiniMax(previewPrompt(profile), 800);
+  const raw = await callDeepSeek(previewPrompt(profile), 800);
   return normalizePreviewReport(raw, profile);
 }
 
 async function generateFull(profile) {
-  const raw = await callMiniMax(fullPrompt(profile), 1800);
+  const raw = await callDeepSeek(fullPrompt(profile), 1800);
   return normalizeFullReport(raw, profile);
 }
 
@@ -307,7 +310,7 @@ app.get("/api/health", (_request, response) => {
   response.json({
     ok: true,
     provider: REPORT_PROVIDER,
-    model: MINIMAX_MODEL,
+    model: DEEPSEEK_MODEL,
     analytics: {
       trackedPages: Object.keys(TRACKED_PAGES),
       timeZone: ANALYTICS_TIMEZONE
@@ -390,9 +393,9 @@ app.post("/api/report/preview", async (request, response) => {
   try {
     const profile = request.body?.profile || {};
 
-    if (REPORT_PROVIDER !== "minimax") {
+    if (REPORT_PROVIDER !== "deepseek") {
       return response.status(400).json({
-        message: "当前后端未启用 minimax 提供者。"
+        message: "当前后端未启用 DeepSeek 提供者。"
       });
     }
 
@@ -409,9 +412,9 @@ app.post("/api/report/full", async (request, response) => {
   try {
     const profile = request.body?.profile || {};
 
-    if (REPORT_PROVIDER !== "minimax") {
+    if (REPORT_PROVIDER !== "deepseek") {
       return response.status(400).json({
-        message: "当前后端未启用 minimax 提供者。"
+        message: "当前后端未启用 DeepSeek 提供者。"
       });
     }
 
