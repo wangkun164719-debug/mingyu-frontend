@@ -15,6 +15,8 @@ import {
 } from "../services/reportApi";
 import { trackEvent, trackPayEvent, usePageView, useScrollDepth } from "../services/analytics";
 
+const detailUnlockItems = ["事业与财富节奏", "关系与情感提醒", "接下来一段时间的行动建议"];
+
 function formatBirthMeta(profile) {
   const timeText = profile.birthTime ? formatBirthTimeDisplay(profile.birthTime) : "时辰待补充";
   return `出生于 ${profile.birthDate} ${timeText} · ${profile.birthPlace}`;
@@ -156,17 +158,37 @@ export default function SimpleResultPage() {
               <p className="mt-4 text-sm leading-8 text-gold-200 sm:text-base">{preview.advice}</p>
             </div>
 
+            <div className="mt-8 rounded-[28px] border border-gold-400/18 bg-gold-400/8 p-5 sm:p-6">
+              <p className="text-sm font-semibold text-gold-200">完整报告将继续展开</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {detailUnlockItems.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-gold-400/18 bg-white/5 px-4 py-2 text-xs font-semibold text-mist-100 sm:text-sm"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
               <button
                 type="button"
                 className="rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
                 onClick={() => {
-                  trackEvent("click_detail_report", { cta_area: "simple_report" });
-                  trackPayEvent("pay_button_click", { cta_area: "simple_report" });
+                  trackEvent("click_detail_report", {
+                    cta_area: "simple_report",
+                    cta_variant: "specific_detail_value"
+                  });
+                  trackPayEvent("pay_button_click", {
+                    cta_area: "simple_report",
+                    cta_variant: "specific_detail_value"
+                  });
                   setPaymentOpen(true);
                 }}
               >
-                查看详细报告
+                继续看事业、财运与关系完整分析
               </button>
               <Link
                 to="/measure"
