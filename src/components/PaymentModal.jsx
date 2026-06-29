@@ -2,6 +2,12 @@ import { useEffect } from "react";
 import { SparkIcon } from "./Icons";
 import { trackPayEvent } from "../services/analytics";
 
+const unlockDetails = [
+  "事业、财富、关系三条线的阶段分析",
+  "当前主轴、关键课题与风险提醒",
+  "更具体的下一步行动建议"
+];
+
 export default function PaymentModal({ open, onClose, onConfirm }) {
   useEffect(() => {
     if (!open) {
@@ -27,21 +33,29 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/70 px-4 backdrop-blur-sm">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
-      <div className="panel relative z-10 w-full max-w-md animate-modal p-6 sm:p-7">
+      <div className="panel relative z-10 w-full max-w-lg animate-modal p-6 sm:p-7">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-gold-400/25 bg-gold-400/10 text-gold-300">
           <SparkIcon className="h-7 w-7" />
         </div>
         <h3 className="mt-5 text-center font-display text-2xl font-semibold text-white">
-          解锁完整命运之书
+          继续查看完整阶段报告
         </h3>
         <p className="mt-3 text-center text-sm leading-7 text-mist-300">
-          限时开放免费体验资格。点击确认后将直接进入详细报告页，不会产生真实扣费。
+          简版已经帮你看见底色，完整报告会继续拆解事业、财富、关系与接下来的行动重点。
         </p>
 
         <div className="mt-6 rounded-3xl border border-gold-500/15 bg-white/5 p-5">
           <div className="flex items-center justify-between gap-5 text-sm text-mist-300">
             <span>完整报告</span>
-            <span className="text-right">命理深度解读 / 阶段建议 / 主题分析</span>
+            <span className="text-right">深度解读 / 阶段建议 / 主题分析</span>
+          </div>
+          <div className="mt-5 space-y-3">
+            {unlockDetails.map((item) => (
+              <div key={item} className="flex items-start gap-3 text-sm leading-6 text-mist-200">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold-300" />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
           <div className="mt-4 flex items-end justify-between gap-4">
             <div>
@@ -74,7 +88,7 @@ export default function PaymentModal({ open, onClose, onConfirm }) {
             className="whitespace-nowrap rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-xs font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(198,157,45,0.24)] active:scale-[0.98] sm:text-sm"
             onClick={onConfirm}
           >
-            立即免费体验
+            免费查看完整报告
           </button>
         </div>
       </div>
