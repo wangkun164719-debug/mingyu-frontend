@@ -14,6 +14,14 @@ import {
 } from "../data/site";
 import { trackEvent, usePageView, useScrollDepth } from "../services/analytics";
 
+const heroPromises = ["事业节奏", "情感关系", "财运提醒"];
+
+const sampleHighlights = [
+  "先看性格底色与当前阶段",
+  "再看事业、情感、财运的重点提醒",
+  "最后给出接下来一段时间的行动建议"
+];
+
 export default function HomePage() {
   usePageView("home");
   useScrollDepth({ 50: "home_scroll_50", 90: "home_scroll_90" });
@@ -27,13 +35,23 @@ export default function HomePage() {
           <div className="mb-5 flex justify-center rounded-full border border-gold-400/12 bg-gold-400/5 p-4 shadow-[0_0_40px_rgba(230,195,90,0.08)]">
             <SparkIcon className="h-14 w-14 text-gold-400 sm:h-16 sm:w-16" />
           </div>
-          <h1 className="font-display text-4xl font-semibold leading-tight tracking-[0.12em] text-white sm:text-5xl lg:text-7xl">
-            聆听命运的低语
+          <h1 className="max-w-4xl font-display text-4xl font-semibold leading-tight tracking-[0.08em] text-white sm:text-5xl lg:text-6xl">
+            3 分钟看懂你的阶段节律
           </h1>
-          <p className="mt-5 text-lg text-gold-300 sm:text-xl">读懂人生的轨迹</p>
+          <p className="mt-5 text-lg text-gold-300 sm:text-xl">生成事业、情感与财运的专属解读</p>
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-8 text-mist-200 sm:text-base">
-            基于出生信息与东方命理意象，带你从性格、情感、事业与运势中找回方向。
+            输入出生信息与关注主题，命语会先给出简版共鸣解读，再展开更完整的事业、关系、财富与行动建议。
           </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            {heroPromises.map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-gold-400/18 bg-white/5 px-4 py-2 text-xs font-semibold text-gold-200 sm:text-sm"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
             <Link
@@ -41,20 +59,63 @@ export default function HomePage() {
               className="inline-flex items-center justify-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
               onClick={() => trackEvent("click_start_measure", { cta_area: "home_hero" })}
             >
-              开始测算
+              立即生成我的解读
               <SparkIcon className="h-4 w-4" />
             </Link>
             <Link
-              to="/about"
+              to="/#report-sample"
               className="inline-flex items-center justify-center rounded-full border border-gold-400/25 bg-white/5 px-6 py-3.5 text-sm font-semibold text-mist-100 transition duration-200 hover:-translate-y-0.5 hover:border-gold-300/40 hover:bg-white/10 active:scale-[0.98]"
-              onClick={() => trackEvent("click_about", { cta_area: "home_hero" })}
+              onClick={() => trackEvent("click_report_sample", { cta_area: "home_hero" })}
             >
-              了解命语
+              先看报告样例
             </Link>
           </div>
           <div className="mt-16 h-16 w-px bg-gradient-to-b from-gold-400/70 to-transparent" />
         </PageSection>
       </section>
+
+      <PageSection id="report-sample" className="pt-16 sm:pt-20">
+        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+          <div className="panel px-6 py-8 sm:px-8">
+            <p className="text-xs uppercase tracking-[0.32em] text-gold-300/80">Report Preview</p>
+            <h2 className="mt-4 font-display text-3xl font-semibold text-white sm:text-4xl">
+              先看看报告会如何回应你
+            </h2>
+            <p className="mt-4 text-sm leading-8 text-mist-300">
+              在正式生成前，可以先了解命语的解读方式：简版先给共鸣，完整报告再展开事业、关系、财富与行动建议。
+            </p>
+            <div className="mt-7 space-y-3">
+              {sampleHighlights.map((item) => (
+                <div key={item} className="flex items-center gap-3 text-sm font-semibold text-mist-100">
+                  <span className="h-2 w-2 rounded-full bg-gold-300" />
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel relative overflow-hidden px-6 py-8 sm:px-8">
+            <div className="absolute right-6 top-6 rounded-full border border-gold-400/20 bg-gold-400/10 px-4 py-2 text-xs font-semibold text-gold-200">
+              脱敏样例
+            </div>
+            <h3 className="max-w-md text-2xl font-semibold text-white">事业阶段解读节选</h3>
+            <p className="mt-5 text-sm leading-8 text-mist-200 sm:text-base">
+              你并不适合被外部节奏强行推着走。越是在关键阶段，越需要保留自己的判断窗口。最近的重点不是同时解决所有问题，而是先把“当前最重要的一件事”明确下来。
+            </p>
+            <p className="mt-5 text-sm leading-8 text-gold-200 sm:text-base">
+              接下来一段时间，更适合把精力放回可持续的结构里：先稳住作息与节奏，再逐步推进事业方向。
+            </p>
+            <Link
+              to="/measure"
+              className="mt-7 inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
+              onClick={() => trackEvent("click_start_measure", { cta_area: "home_sample" })}
+            >
+              生成我的专属版本
+              <SparkIcon className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </PageSection>
 
       <PageSection className="pt-16 sm:pt-20">
         <SectionTitle icon={false} title="专属命理解读服务" />
@@ -156,16 +217,16 @@ export default function HomePage() {
 
       <PageSection className="py-20">
         <div className="panel mx-auto max-w-3xl bg-[linear-gradient(145deg,rgba(47,33,79,0.78),rgba(18,29,56,0.9))] px-6 py-10 text-center sm:px-8 lg:px-10">
-          <h3 className="font-display text-3xl font-semibold text-white sm:text-4xl">探索你的命运之书</h3>
+          <h3 className="font-display text-3xl font-semibold text-white sm:text-4xl">生成你的阶段解读</h3>
           <p className="mt-4 text-sm leading-7 text-mist-300">
-            只需几分钟，即可获得关于你的节律与方向。
+            从简版共鸣开始，再继续查看事业、财运、关系与行动建议。
           </p>
           <Link
             to="/measure"
             className="mt-8 inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-400 px-6 py-3.5 text-sm font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
             onClick={() => trackEvent("click_start_measure", { cta_area: "home_bottom" })}
           >
-            立即开始
+            开始 3 分钟测算
             <SparkIcon className="h-4 w-4" />
           </Link>
         </div>
