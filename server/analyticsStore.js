@@ -12,6 +12,7 @@ export const TRACKED_PAGES = {
 
 const FUNNEL_EVENTS = [
   "home_view",
+  "click_report_sample",
   "click_start_measure",
   "measure_page_view",
   "measure_form_start",
@@ -172,6 +173,7 @@ function ensureContentBucket(container, key, values) {
       utm_campaign: values.utm_campaign || "",
       landing_page: values.landing_page || "/",
       visitors: {},
+      click_report_sample: 0,
       measure_submit_success: 0,
       click_detail_report: 0
     };
@@ -388,6 +390,7 @@ export function getAnalyticsDailySummary({
 
   const conversionRates = {
     home_to_measure_click_rate: formatRate(funnel.click_start_measure, funnel.home_view),
+    home_to_report_sample_click_rate: formatRate(funnel.click_report_sample, funnel.home_view),
     measure_page_to_form_start_rate: formatRate(funnel.measure_form_start, funnel.measure_page_view),
     form_start_to_submit_success_rate: formatRate(funnel.measure_submit_success, funnel.measure_form_start),
     report_to_detail_click_rate: formatRate(funnel.click_detail_report, funnel.report_page_view),
@@ -419,6 +422,7 @@ export function getAnalyticsDailySummary({
         utm_campaign: bucket.utm_campaign || "",
         landing_page: bucket.landing_page || "/",
         uv: Object.keys(bucket.visitors || {}).length,
+        click_report_sample: Number(bucket.click_report_sample || 0),
         measure_submit_success: Number(bucket.measure_submit_success || 0),
         click_detail_report: Number(bucket.click_detail_report || 0)
       }))
@@ -527,6 +531,10 @@ export function recordAnalyticsEvent({
 
   if (eventName === "measure_submit_success") {
     contentBucket.measure_submit_success += 1;
+  }
+
+  if (eventName === "click_report_sample") {
+    contentBucket.click_report_sample += 1;
   }
 
   if (eventName === "click_detail_report") {
