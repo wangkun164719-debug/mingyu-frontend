@@ -10,11 +10,11 @@ services:
       - key: NODE_VERSION
         value: 20
       - key: REPORT_PROVIDER
-        value: minimax
-      - key: MINIMAX_MODEL
-        value: MiniMax-M2.7
-      - key: MINIMAX_BASE_URL
-        value: https://api.minimaxi.com/v1
+        value: deepseek
+      - key: DEEPSEEK_MODEL
+        value: deepseek-v4-flash
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com
       - key: ANALYTICS_TIMEZONE
         value: Asia/Shanghai
       - key: PUBLIC_SITE_URL
@@ -23,5 +23,5 @@ services:
         value: 904e016c0ae35c58897ed409de422d76
       - key: ANALYTICS_API_TOKEN
         sync: false
-      - key: MINIMAX_API_KEY
+      - key: DEEPSEEK_API_KEY
         sync: false
