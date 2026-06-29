@@ -13,6 +13,14 @@ import { preferenceOptions } from "../data/site";
 import { trackEvent, usePageView } from "../services/analytics";
 import { saveLatestProfile } from "../services/reportApi";
 
+const reportBenefits = [
+  { label: "先看简版共鸣", text: "快速了解性格底色、关注主题与近期提醒。" },
+  { label: "再看完整报告", text: "继续展开事业、财运、关系与阶段行动建议。" },
+  { label: "不确定也能测", text: "出生时间可选择暂不清楚，报告会用更稳妥的方式表达。" }
+];
+
+const privacyNotes = ["仅用于生成本次解读", "不会在报告中展示敏感地址", "可随时重新填写"];
+
 const initialForm = {
   name: "",
   gender: "",
@@ -200,7 +208,30 @@ export default function InfoFormPage() {
 
   return (
     <div className="pb-6">
-      <PageIntro title="填写您的信息" subtitle="请准确填写以下信息，我们将为您生成专属的命理解读" />
+      <PageIntro title="生成你的阶段解读" subtitle="填写基础出生信息，先获得简版共鸣，再继续查看完整报告" />
+
+      <PageSection className="pt-10">
+        <div className="panel mx-auto max-w-3xl px-6 py-6 sm:px-8">
+          <div className="grid gap-5 sm:grid-cols-3">
+            {reportBenefits.map((item) => (
+              <div key={item.label}>
+                <p className="text-sm font-semibold text-gold-300">{item.label}</p>
+                <p className="mt-2 text-xs leading-6 text-mist-300">{item.text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {privacyNotes.map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-gold-400/16 bg-white/5 px-3 py-1.5 text-xs font-semibold text-mist-200"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </PageSection>
 
       <PageSection className="pt-12">
         <form className="panel mx-auto max-w-3xl p-6 sm:p-8 lg:p-10" onSubmit={onSubmit} noValidate>
@@ -298,17 +329,19 @@ export default function InfoFormPage() {
             type="submit"
             className="mt-10 w-full rounded-full border border-gold-300/40 bg-gold-400 px-6 py-4 text-base font-semibold text-ink-950 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(198,157,45,0.24)] active:scale-[0.98]"
           >
-            生成命理解读
+            生成我的简版解读
           </button>
 
-          <p className="mt-5 text-center text-sm text-mist-400">我们承诺保护您的隐私安全</p>
+          <p className="mt-5 text-center text-sm leading-6 text-mist-400">
+            通常 20-40 秒生成结果。信息仅用于本次解读，命语不会把你的出生信息展示给他人。
+          </p>
         </form>
       </PageSection>
 
       <PageSection className="pt-8 pb-12">
         <div className="panel mx-auto max-w-3xl px-6 py-5 text-sm leading-7 text-mist-300 sm:px-8">
           <span className="font-semibold text-gold-300">温馨提示：</span>
-          出生时间越准确，命理解读越精准。如不确定具体时辰，可以咨询长辈或查询出生证明。
+          出生时间越准确，命理解读越细致；如果暂时不确定，也可以先选择“暂不清楚”完成体验。
         </div>
       </PageSection>
     </div>
