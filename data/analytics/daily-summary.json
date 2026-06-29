@@ -21,6 +21,7 @@
   },
   "funnel": {
     "home_view": 0,
+    "click_report_sample": 0,
     "click_start_measure": 0,
     "measure_page_view": 0,
     "measure_form_start": 0,
@@ -33,6 +34,7 @@
   },
   "conversion_rates": {
     "home_to_measure_click_rate": 0,
+    "home_to_report_sample_click_rate": 0,
     "measure_page_to_form_start_rate": 0,
     "form_start_to_submit_success_rate": 0,
     "report_to_detail_click_rate": 0,
@@ -44,6 +46,7 @@
       "utm_campaign": "day1_career",
       "landing_page": "/measure",
       "uv": 0,
+      "click_report_sample": 0,
       "measure_submit_success": 0,
       "click_detail_report": 0
     }
