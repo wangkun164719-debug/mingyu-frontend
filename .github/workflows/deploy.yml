@@ -43,11 +43,14 @@ jobs:
         uses: appleboy/ssh-action@v1.2.4
         env:
           VITE_BAIDU_TONGJI_ID: ${{ vars.VITE_BAIDU_TONGJI_ID }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: ${{ vars.DEEPSEEK_MODEL }}
+          DEEPSEEK_BASE_URL: ${{ vars.DEEPSEEK_BASE_URL }}
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_USER }}
           key: ${{ secrets.ALIYUN_SSH_KEY }}
-          envs: VITE_BAIDU_TONGJI_ID
+          envs: VITE_BAIDU_TONGJI_ID,DEEPSEEK_API_KEY,DEEPSEEK_MODEL,DEEPSEEK_BASE_URL
           script_stop: true
           command_timeout: 20m
           script: |
@@ -98,13 +101,33 @@ jobs:
               cp -r "$DATA_BAK" "$APP_DIR/server/data"
             fi
 
-            echo "==> Setting public site URL"
+            set_env_value() {
+              local env_file="$1"
+              local key="$2"
+              local value="$3"
+
+              if grep -q "^${key}=" "$env_file"; then
+                sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
+              else
+                printf '\n%s=%s\n' "$key" "$value" >> "$env_file"
+              fi
+            }
+
+            echo "==> Setting DeepSeek report env"
             touch "$APP_DIR/server/.env"
-            if grep -q '^PUBLIC_SITE_URL=' "$APP_DIR/server/.env"; then
-              sed -i 's|^PUBLIC_SITE_URL=.*|PUBLIC_SITE_URL=https://www.mingyuwk.com|' "$APP_DIR/server/.env"
-            else
-              printf '\nPUBLIC_SITE_URL=https://www.mingyuwk.com\n' >> "$APP_DIR/server/.env"
+            if [ -z "${DEEPSEEK_API_KEY:-}" ] && ! grep -q '^DEEPSEEK_API_KEY=' "$APP_DIR/server/.env"; then
+              echo "ERROR: DEEPSEEK_API_KEY is missing. Add it as a GitHub Actions repository secret."
+              exit 1
             fi
+            set_env_value "$APP_DIR/server/.env" "REPORT_PROVIDER" "deepseek"
+            set_env_value "$APP_DIR/server/.env" "DEEPSEEK_MODEL" "${DEEPSEEK_MODEL:-deepseek-v4-flash}"
+            set_env_value "$APP_DIR/server/.env" "DEEPSEEK_BASE_URL" "${DEEPSEEK_BASE_URL:-https://api.deepseek.com}"
+            if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
+              set_env_value "$APP_DIR/server/.env" "DEEPSEEK_API_KEY" "$DEEPSEEK_API_KEY"
+            fi
+
+            echo "==> Setting public site URL"
+            set_env_value "$APP_DIR/server/.env" "PUBLIC_SITE_URL" "https://www.mingyuwk.com"
 
             echo "==> Setting frontend analytics env"
             touch "$APP_DIR/.env"
